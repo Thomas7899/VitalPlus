@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🩺 Vital+
 
-## Getting Started
+**Vital+** ist eine moderne Webanwendung zur Erfassung, Visualisierung und Verwaltung von Gesundheits- und Vitaldaten. Sie richtet sich an Nutzer:innen, die ihre körperliche Gesundheit im Blick behalten und auf smarte Weise analysieren möchten.
 
-First, run the development server:
+## 🚀 Features
+
+- ✅ Benutzer-Login via **NextAuth.js** (Credentials Provider)
+- 📊 Übersichtliches Dashboard für Vitaldaten
+- 🌙 Dark Mode Unterstützung
+- 🗂 Sidebar-Navigation mit responsive Design
+- 📥 Integration einer PostgreSQL-Datenbank (Neon)
+- 💉 Erweiterbar für Smartwatch-/Wearable-Integrationen
+- ⚙️ Modulare und erweiterbare Komponentenstruktur
+
+## 🛠️ Tech Stack
+
+- **Next.js** – App Router, moderne Web-Architektur
+- **Tailwind CSS** – Utility-first Styling
+- **ShadCN UI** – Schöne, zugängliche UI-Komponenten
+- **NextAuth.js** – Sichere Authentifizierung
+- **PostgreSQL** – Datenbank für Vitaldaten
+- **TypeScript** – Typensicherheit im gesamten Projekt
+
+## 🖼️ Beispiel-Screenshots
+
+*(hier kannst du später Screenshots einfügen)*
+
+## 📦 Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Repository klonen
+git clone https://github.com/thomas7899/vital+.git
+cd vitalcheck
+
+# Abhängigkeiten installieren
+pnpm install
+
+# .env Datei anlegen und konfigurieren
+cp .env.example .env
+
+# Entwicklungsserver starten
 pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🔐 .env Konfiguration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+POSTGRES_URL=postgresql://user:password@host:port/database
+NEXTAUTH_SECRET=your-secret
+NEXTAUTH_URL=http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+📁 Projektstruktur
 
-## Learn More
+.
+├── components/
+├── lib/
+├── app/
+│   ├── login/
+│   ├── gesundheit/
+│   └── api/
+├── hooks/
+└── ...
 
-To learn more about Next.js, take a look at the following resources:
+🤝 Mitwirken
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Pull Requests sind willkommen! Wenn du neue Features vorschlagen oder Bugs melden möchtest, eröffne gerne ein Issue.
+📜 Lizenz
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+MIT License – mehr Infos
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+    Vital+ ist ein Projekt aus Leidenschaft für moderne Webentwicklung und Gesundheit. 💙
