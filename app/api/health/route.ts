@@ -9,20 +9,31 @@ export async function GET(req: NextRequest) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
+  // Validierung der Datumswerte
+  const fromDate = from ? new Date(from) : null;
+  const toDate = to ? new Date(to) : null;
+
+  if ((fromDate && isNaN(fromDate.getTime())) || (toDate && isNaN(toDate.getTime()))) {
+    return NextResponse.json(
+      { error: "Ungültige Datumswerte" },
+      { status: 400 }
+    );
+  }
+
   const data = await prisma.healthData.findMany({
     where: {
       ...(userId ? { userId } : {}),
-      ...(from || to
+      ...(fromDate || toDate
         ? {
             date: {
-              ...(from ? { gte: new Date(from) } : {}),
-              ...(to ? { lte: new Date(to) } : {}),
+              ...(fromDate ? { gte: fromDate } : {}),
+              ...(toDate ? { lte: toDate } : {}),
             },
           }
         : {}),
     },
     orderBy: { date: "desc" },
-    take: 100, 
+    take: 100,
   });
 
   return NextResponse.json(data);
