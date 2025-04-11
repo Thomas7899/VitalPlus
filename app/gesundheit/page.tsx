@@ -221,7 +221,7 @@ export default function HealthPage() {
       case "bodyFat":
         return `${value}%`;
       default:
-        return value;
+        return value.toString();
     }
   };
 
