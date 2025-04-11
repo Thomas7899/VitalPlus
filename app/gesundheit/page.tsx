@@ -28,6 +28,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+
 type HealthData = {
   id: string;
   date: string;
@@ -301,6 +302,7 @@ export default function HealthPage() {
 
       {selectedUser && !isLoading && !error && (
         <>
+      
           <Tabs defaultValue={activeCategory} onValueChange={setActiveCategory}>
             <TabsList className="flex flex-wrap" aria-label="Kategorien">
               {categories.map((cat) => (
