@@ -10,12 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -96,32 +91,84 @@ export default function HealthPage() {
 
   const metrics = [
     { key: "steps", label: "Schritte", color: "#4F46E5", category: "Fitness" },
-    { key: "calories", label: "Kalorien", color: "#F59E0B", category: "Fitness" },
+    {
+      key: "calories",
+      label: "Kalorien",
+      color: "#F59E0B",
+      category: "Fitness",
+    },
     { key: "weight", label: "Gewicht", color: "#F97316", category: "Fitness" },
     { key: "bmi", label: "BMI", color: "#6366F1", category: "Fitness" },
-    { key: "muscleMass", label: "Muskelmasse", color: "#6B7280", category: "Fitness" },
-    { key: "bodyFat", label: "Körperfettanteil", color: "#EC4899", category: "Fitness" },
+    {
+      key: "muscleMass",
+      label: "Muskelmasse",
+      color: "#6B7280",
+      category: "Fitness",
+    },
+    {
+      key: "bodyFat",
+      label: "Körperfettanteil",
+      color: "#EC4899",
+      category: "Fitness",
+    },
 
-    { key: "heartRate", label: "Herzfrequenz", color: "#EF4444", category: "Vitalwerte" },
-    { key: "respiratoryRate", label: "Atemfrequenz", color: "#F472B6", category: "Vitalwerte" },
-    { key: "oxygenSaturation", label: "Sauerstoffsättigung", color: "#34D399", category: "Vitalwerte" },
-    { key: "bloodPressure", label: "Blutdruck", color: "#9CA3AF", category: "Vitalwerte" },
+    {
+      key: "heartRate",
+      label: "Herzfrequenz",
+      color: "#EF4444",
+      category: "Vitalwerte",
+    },
+    {
+      key: "respiratoryRate",
+      label: "Atemfrequenz",
+      color: "#F472B6",
+      category: "Vitalwerte",
+    },
+    {
+      key: "oxygenSaturation",
+      label: "Sauerstoffsättigung",
+      color: "#34D399",
+      category: "Vitalwerte",
+    },
+    {
+      key: "bloodPressure",
+      label: "Blutdruck",
+      color: "#9CA3AF",
+      category: "Vitalwerte",
+    },
 
-    { key: "sleepHours", label: "Schlafstunden", color: "#10B981", category: "Körperlich" },
-    { key: "bodyTemp", label: "Körpertemperatur", color: "#EF7F24", category: "Körperlich" },
+    {
+      key: "sleepHours",
+      label: "Schlafstunden",
+      color: "#10B981",
+      category: "Körperlich",
+    },
+    {
+      key: "bodyTemp",
+      label: "Körpertemperatur",
+      color: "#EF7F24",
+      category: "Körperlich",
+    },
 
-    { key: "medications", label: "Medikamente", color: "#D1D5DB", category: "Medikamente" },
+    {
+      key: "medications",
+      label: "Medikamente",
+      color: "#D1D5DB",
+      category: "Medikamente",
+    },
   ] as const;
 
   const categories = [...new Set(metrics.map((m) => m.category))];
-  const metricsByCategory = metrics.filter((m) => m.category === activeCategory);
+  const metricsByCategory = metrics.filter(
+    (m) => m.category === activeCategory
+  );
 
   useEffect(() => {
     setIsLoading(true);
     setError(null);
     fetch("/api/users")
       .then((res) => {
-        if (!res.ok) throw new Error('Fehler beim Laden der Nutzer');
+        if (!res.ok) throw new Error("Fehler beim Laden der Nutzer");
         return res.json();
       })
       .then(setUsers)
@@ -144,7 +191,7 @@ export default function HealthPage() {
 
     fetch(`/api/health?${params.toString()}`)
       .then((res) => {
-        if (!res.ok) throw new Error('Fehler beim Laden der Gesundheitsdaten');
+        if (!res.ok) throw new Error("Fehler beim Laden der Gesundheitsdaten");
         return res.json();
       })
       .then(setData)
@@ -152,9 +199,12 @@ export default function HealthPage() {
       .finally(() => setIsLoading(false));
   }, [selectedUser, from, to]);
 
-  const formatValue = (value: any, key: string) => {
+  const formatValue = (
+    value: string | number | null | undefined,
+    key: string
+  ): string => {
     if (value === undefined || value === null) return "-";
-    
+
     switch (key) {
       case "date":
         return new Date(value).toLocaleDateString("de-DE");
@@ -181,7 +231,12 @@ export default function HealthPage() {
 
       <div className="flex flex-col md:flex-row md:items-end gap-4">
         <div className="max-w-sm">
-          <label htmlFor="user-select" className="block text-sm font-medium mb-1">Nutzer</label>
+          <label
+            htmlFor="user-select"
+            className="block text-sm font-medium mb-1"
+          >
+            Nutzer
+          </label>
           <Select onValueChange={setSelectedUser}>
             <SelectTrigger id="user-select" aria-label="Nutzer auswählen">
               <SelectValue placeholder="Nutzer wählen..." />
@@ -197,7 +252,9 @@ export default function HealthPage() {
         </div>
 
         <div>
-          <label htmlFor="date-from" className="block text-sm font-medium mb-1">Von</label>
+          <label htmlFor="date-from" className="block text-sm font-medium mb-1">
+            Von
+          </label>
           <input
             id="date-from"
             type="date"
@@ -207,7 +264,9 @@ export default function HealthPage() {
           />
         </div>
         <div>
-          <label htmlFor="date-to" className="block text-sm font-medium mb-1">Bis</label>
+          <label htmlFor="date-to" className="block text-sm font-medium mb-1">
+            Bis
+          </label>
           <input
             id="date-to"
             type="date"
@@ -219,7 +278,10 @@ export default function HealthPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded" role="alert">
+        <div
+          className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -270,10 +332,20 @@ export default function HealthPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" />
                         <YAxis />
-                        <Tooltip 
-                          formatter={(value: any) => formatValue(value, metric.key)}
-                          labelFormatter={(label) => new Date(label).toLocaleDateString("de-DE")}
+                        <Tooltip
+                          formatter={(
+                            value: string | number | (string | number)[] | null
+                          ) =>
+                            formatValue(
+                              Array.isArray(value) ? value[0] : value,
+                              metric.key
+                            )
+                          }
+                          labelFormatter={(label: string) =>
+                            new Date(label).toLocaleDateString("de-DE")
+                          }
                         />
+
                         <Line
                           type="monotone"
                           dataKey={metric.key}
@@ -303,9 +375,7 @@ export default function HealthPage() {
                 <TableBody>
                   {data.map((entry) => (
                     <TableRow key={entry.id}>
-                      <TableCell>
-                        {formatValue(entry.date, "date")}
-                      </TableCell>
+                      <TableCell>{formatValue(entry.date, "date")}</TableCell>
                       {metricsByCategory.map((metric) => {
                         let emoji = "";
                         if (
@@ -324,11 +394,17 @@ export default function HealthPage() {
                           metric.key === "bloodPressure" &&
                           typeof entry.bloodPressure === "string"
                         ) {
-                          emoji = getBloodPressureEmoji(entry.bloodPressure).split(" ")[0];
+                          emoji = getBloodPressureEmoji(
+                            entry.bloodPressure
+                          ).split(" ")[0];
                         }
                         return (
                           <TableCell key={metric.key}>
-                            {formatValue(entry[metric.key as keyof HealthData], metric.key)} {emoji}
+                            {formatValue(
+                              entry[metric.key as keyof HealthData],
+                              metric.key
+                            )}{" "}
+                            {emoji}
                           </TableCell>
                         );
                       })}
