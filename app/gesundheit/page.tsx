@@ -91,6 +91,8 @@ export default function HealthPage() {
   const [from, setFrom] = useState<string | null>(null);
   const [to, setTo] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("Fitness");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const metrics = [
     { key: "steps", label: "Schritte", color: "#4F46E5", category: "Fitness" },
@@ -115,9 +117,16 @@ export default function HealthPage() {
   const metricsByCategory = metrics.filter((m) => m.category === activeCategory);
 
   useEffect(() => {
+    setIsLoading(true);
+    setError(null);
     fetch("/api/users")
-      .then((res) => res.json())
-      .then(setUsers);
+      .then((res) => {
+        if (!res.ok) throw new Error('Fehler beim Laden der Nutzer');
+        return res.json();
+      })
+      .then(setUsers)
+      .catch((err) => setError(err.message))
+      .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -126,15 +135,45 @@ export default function HealthPage() {
       return;
     }
 
+    setIsLoading(true);
+    setError(null);
     const params = new URLSearchParams();
     params.append("userId", selectedUser);
     if (from) params.append("from", from);
     if (to) params.append("to", to);
 
     fetch(`/api/health?${params.toString()}`)
-      .then((res) => res.json())
-      .then(setData);
+      .then((res) => {
+        if (!res.ok) throw new Error('Fehler beim Laden der Gesundheitsdaten');
+        return res.json();
+      })
+      .then(setData)
+      .catch((err) => setError(err.message))
+      .finally(() => setIsLoading(false));
   }, [selectedUser, from, to]);
+
+  const formatValue = (value: any, key: string) => {
+    if (value === undefined || value === null) return "-";
+    
+    switch (key) {
+      case "date":
+        return new Date(value).toLocaleDateString("de-DE");
+      case "weight":
+        return `${value} kg`;
+      case "heartRate":
+      case "respiratoryRate":
+        return `${value} /min`;
+      case "oxygenSaturation":
+        return `${value}%`;
+      case "bodyTemp":
+        return `${value}°C`;
+      case "muscleMass":
+      case "bodyFat":
+        return `${value}%`;
+      default:
+        return value;
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -142,9 +181,9 @@ export default function HealthPage() {
 
       <div className="flex flex-col md:flex-row md:items-end gap-4">
         <div className="max-w-sm">
-          <label className="block text-sm font-medium mb-1">Nutzer</label>
+          <label htmlFor="user-select" className="block text-sm font-medium mb-1">Nutzer</label>
           <Select onValueChange={setSelectedUser}>
-            <SelectTrigger>
+            <SelectTrigger id="user-select" aria-label="Nutzer auswählen">
               <SelectValue placeholder="Nutzer wählen..." />
             </SelectTrigger>
             <SelectContent>
@@ -158,33 +197,50 @@ export default function HealthPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Von</label>
+          <label htmlFor="date-from" className="block text-sm font-medium mb-1">Von</label>
           <input
+            id="date-from"
             type="date"
             className="border rounded px-3 py-2"
             onChange={(e) => setFrom(e.target.value || null)}
+            aria-label="Datum von"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Bis</label>
+          <label htmlFor="date-to" className="block text-sm font-medium mb-1">Bis</label>
           <input
+            id="date-to"
             type="date"
             className="border rounded px-3 py-2"
             onChange={(e) => setTo(e.target.value || null)}
+            aria-label="Datum bis"
           />
         </div>
       </div>
 
-      {!selectedUser && (
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded" role="alert">
+          {error}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Daten werden geladen...</p>
+        </div>
+      )}
+
+      {!selectedUser && !isLoading && (
         <div className="text-gray-500 text-center mt-10">
           🧑‍⚕️ Bitte wähle einen Nutzer aus, um Gesundheitsdaten anzuzeigen.
         </div>
       )}
 
-      {selectedUser && (
+      {selectedUser && !isLoading && !error && (
         <>
           <Tabs defaultValue={activeCategory} onValueChange={setActiveCategory}>
-            <TabsList className="flex flex-wrap">
+            <TabsList className="flex flex-wrap" aria-label="Kategorien">
               {categories.map((cat) => (
                 <TabsTrigger key={cat} value={cat}>
                   {cat}
@@ -194,7 +250,7 @@ export default function HealthPage() {
           </Tabs>
 
           <Tabs defaultValue={metricsByCategory[0]?.key}>
-            <TabsList className="flex flex-wrap">
+            <TabsList className="flex flex-wrap" aria-label="Metriken">
               {metricsByCategory.map((metric) => (
                 <TabsTrigger key={metric.key} value={metric.key}>
                   {metric.label}
@@ -214,7 +270,10 @@ export default function HealthPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" />
                         <YAxis />
-                        <Tooltip />
+                        <Tooltip 
+                          formatter={(value: any) => formatValue(value, metric.key)}
+                          labelFormatter={(label) => new Date(label).toLocaleDateString("de-DE")}
+                        />
                         <Line
                           type="monotone"
                           dataKey={metric.key}
@@ -245,7 +304,7 @@ export default function HealthPage() {
                   {data.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell>
-                        {new Date(entry.date).toLocaleDateString()}
+                        {formatValue(entry.date, "date")}
                       </TableCell>
                       {metricsByCategory.map((metric) => {
                         let emoji = "";
@@ -269,7 +328,7 @@ export default function HealthPage() {
                         }
                         return (
                           <TableCell key={metric.key}>
-                            {entry[metric.key as keyof HealthData] ?? "-"} {emoji}
+                            {formatValue(entry[metric.key as keyof HealthData], metric.key)} {emoji}
                           </TableCell>
                         );
                       })}

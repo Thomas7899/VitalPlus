@@ -5,6 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 
+type User = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 const userSchema = z.object({
   name: z.string().min(3, "Name muss mindestens 3 Zeichen haben"),
   email: z.string().email("Ungültige E-Mail"),
@@ -70,7 +76,7 @@ export default function UsersPage() {
     }
   };
 
-  const handleEdit = (user: any) => {
+  const handleEdit = (user: User) => {
     setName(user.name);
     setEmail(user.email);
     setEditUser(user);
@@ -99,7 +105,7 @@ export default function UsersPage() {
 
       <h2 className="text-2xl font-bold mb-4">Alle User</h2>
       <ul className="space-y-4">
-        {users.map((user: any) => (
+        {users.map((user: User) => (
           <li key={user.id} className="flex justify-between items-center p-4 bg-gray-100 rounded-md">
             <span>{user.name} ({user.email})</span>
             <div>

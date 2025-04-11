@@ -13,7 +13,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar/sidebar";
 import { Button } from "@/components/ui/button";
-import { Home, Settings, User, Heart } from "lucide-react";
+import { Home, User, Heart } from "lucide-react";
 import Link from "next/link";
 
 const geistSans = Geist({
