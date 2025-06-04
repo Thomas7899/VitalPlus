@@ -3,8 +3,13 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { HealthForm } from "@/components/health-form";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { z } from "zod";
 
 type User = {
@@ -80,10 +85,10 @@ export default function UsersPage() {
   };
 
   const handleEdit = (user: User) => {
-  setName(user.name ?? "");
-  setEmail(user.email ?? "");
-}
-
+    setName(user.name ?? "");
+    setEmail(user.email ?? "");
+    setEditUser(user); // wichtig!
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -96,75 +101,35 @@ export default function UsersPage() {
         <div className="mb-4">
           <label className="block text-gray-700 font-medium mb-2">Name</label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
         </div>
 
         <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">Email</label>
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+          <label className="block text-gray-700 font-medium mb-2">E-Mail</label>
+          <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
         </div>
 
-        <Button type="submit" className="w-full">
-          {editUser ? "User aktualisieren" : "User hinzufügen"}
-        </Button>
+        <Button type="submit">{editUser ? "Aktualisieren" : "Erstellen"}</Button>
       </form>
 
-      <h2 className="text-2xl font-bold mb-4">Alle User</h2>
-
-      <ul className="space-y-4">
-        {users.map((user) => (
-          <li
-            key={user.id}
-            className="flex justify-between items-center p-4 bg-gray-100 rounded-md"
-          >
-            <span>
-              {user.name} ({user.email})
-            </span>
-            <div className="flex gap-2">
-              <Button
-                className="bg-yellow-500 text-white"
-                onClick={() => handleEdit(user)}
-              >
-                Edit
-              </Button>
-              <Button
-                className="bg-red-500 text-white"
-                onClick={() => handleDelete(user.id)}
-              >
-                Delete
-              </Button>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    className="bg-blue-600 text-white"
-                    onClick={() => setSelectedUserId(user.id)}
-                  >
-                    Gesundheitsdaten
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>
-                      Gesundheitsdaten für {user.name}
-                    </DialogTitle>
-                  </DialogHeader>
-                  {selectedUserId === user.id && (
-                    <HealthForm
-                      userId={user.id}
-                      onSuccess={() => console.log("Gesundheitsdaten gespeichert")}
-                    />
-                  )}
-                </DialogContent>
-              </Dialog>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="max-w-2xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4">Benutzerliste</h2>
+        <ul className="space-y-4">
+          {users.map((user) => (
+            <li key={user.id} className="flex justify-between items-center bg-gray-100 p-4 rounded shadow-sm">
+              <div>
+                <p className="font-semibold">{user.name}</p>
+                <p className="text-sm text-gray-600">{user.email}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => handleEdit(user)}>Bearbeiten</Button>
+                <Button variant="destructive" onClick={() => handleDelete(user.id)}>Löschen</Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
