@@ -94,30 +94,34 @@ export async function POST(req: NextRequest) {
   }
 }
 
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
-  const data = await prisma.healthData.findMany({
-    where: {
-      ...(userId ? { userId } : {}),
-      ...(from || to
-        ? {
-            date: {
-              ...(from ? { gte: new Date(from) } : {}),
-              ...(to ? { lte: new Date(to) } : {}),
-            },
-          }
-        : {}),
-    },
-    orderBy: { date: "desc" },
-    take: 100, 
-  });
+  try {
+    const data = await prisma.healthData.findMany({
+      where: {
+        ...(userId ? { userId } : {}),
+        ...(from || to
+          ? {
+              date: {
+                ...(from ? { gte: new Date(from) } : {}),
+                ...(to ? { lte: new Date(to) } : {}),
+              },
+            }
+          : {}),
+      },
+      orderBy: { date: "desc" },
+      take: 100,
+    });
 
-  return NextResponse.json(data);
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Fehler beim Abrufen der Gesundheitsdaten:", error);
+    return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
+  }
 }
 
 
