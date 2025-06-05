@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { VitalPlusLogo } from "@/components/VitalPlusLogo";
-
+// Ensure the font import matches your project structure and font file names.
+// If your font files are named Geist.woff2 etc., then 'Geist' is correct.
+// If they are GeistSans.woff2, then 'Geist_Sans' might be what you intended.
+// The original code had `Geist` and `Geist_Mono`.
+import { Geist as geistSans, Geist_Mono as geistMono } from "next/font/google";
+import "./globals.css"; // Make sure your global styles don't conflict with layout.
+import { VitalPlusLogo } from "@/components/VitalPlusLogo"; // Ensure path is correct
 import {
   SidebarProvider,
   Sidebar,
@@ -11,17 +14,18 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarTrigger,
-} from "@/components/ui/sidebar/sidebar";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/sidebar/sidebar"; // Ensure path is correct
+import { Button } from "@/components/ui/button"; // Ensure path is correct
 import { Home, User, Heart } from "lucide-react";
 import Link from "next/link";
 
-const geistSans = Geist({
+// Initialize the fonts
+const geistSansFont = geistSans({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
+const geistMonoFont = geistMono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
@@ -37,44 +41,72 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    // The <html> tag should have h-full to ensure the body can also be h-full.
+    <html lang="en" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSansFont.variable} ${geistMonoFont.variable} antialiased h-full flex flex-col bg-background text-foreground overflow-hidden`}
+        // 1. h-full: Body takes full height of the html element.
+        // 2. flex flex-col: Allows children to be stacked vertically and use flex-1 for expansion.
+        // 3. bg-background, text-foreground: Common Tailwind classes for base styling (adjust if not using shadcn/ui defaults).
+        // 4. overflow-hidden: Prevents the body itself from scrolling; scrolling should be handled by specific regions like 'main' or 'SidebarContent'.
       >
         <SidebarProvider>
-          <div className="flex h-screen">
-            <Sidebar className="w-64 border-r bg-gray-100 dark:bg-gray-900">
-              <SidebarHeader className="p-4 border-b">
-              <Link href="/" passHref>
-              <VitalPlusLogo />
+          {/* This div is the primary flex container for the sidebar and main content area.
+              - 'flex': Arranges Sidebar and Main content in a row.
+              - 'flex-1': Makes this div take up all available vertical space within the body (because body is flex-col).
+              - 'overflow-hidden': Prevents this container from showing scrollbars if its children (Sidebar or main)
+                                   have overflow issues. Scrolling is handled by children.
+           */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar:
+                - w-64: Fixed width.
+                - border-r: Right border.
+                - bg-card, text-card-foreground: Theming for sidebar (adjust as needed).
+                - flex flex-col: Allows header, content, and footer to stack vertically within the sidebar.
+                - flex-shrink-0: Prevents the sidebar from shrinking if main content is too wide.
+            */}
+            <Sidebar className="w-64 border-r border-border bg-card text-card-foreground flex flex-col flex-shrink-0">
+              <SidebarHeader className="p-4 border-b border-border">
+                <Link href="/" passHref>
+                  <VitalPlusLogo />
                 </Link>
               </SidebarHeader>
+              {/* SidebarContent:
+                  - flex-1: Takes up available vertical space between header and footer.
+                  - overflow-y-auto: Allows vertical scrolling if sidebar content is too long.
+              */}
               <SidebarContent className="flex-1 overflow-y-auto p-4">
                 <SidebarGroup>
-                  <Link href="/">
-                    <Button variant="ghost" className="w-full flex justify-start">
+                  <Link href="/" passHref>
+                    <Button variant="ghost" className="w-full flex justify-start items-center">
                       <Home className="mr-2 h-5 w-5" /> Home
                     </Button>
                   </Link>
-                  <Link href="/user">
-                    <Button variant="ghost" className="w-full flex justify-start">
+                  <Link href="/user" passHref>
+                    <Button variant="ghost" className="w-full flex justify-start items-center">
                       <User className="mr-2 h-5 w-5" /> User
                     </Button>
                   </Link>
-                  <Link href="/gesundheit">
-                    <Button variant="ghost" className="w-full flex justify-start">
+                  <Link href="/gesundheit" passHref>
+                    <Button variant="ghost" className="w-full flex justify-start items-center">
                       <Heart className="mr-2 h-5 w-5" /> Gesundheit
                     </Button>
                   </Link>
                 </SidebarGroup>
               </SidebarContent>
-              <SidebarFooter className="p-4 border-t">
+              <SidebarFooter className="p-4 border-t border-border">
                 <SidebarTrigger>
                   <Button variant="outline" className="w-full">Toggle Sidebar</Button>
                 </SidebarTrigger>
               </SidebarFooter>
             </Sidebar>
-            <main className="flex-1 p-4 overflow-y-auto">
+
+            {/* Main content area:
+                - flex-1: Takes up the remaining horizontal space next to the sidebar.
+                - overflow-auto: Allows both vertical and horizontal scrolling if the content (e.g., charts)
+                                 is larger than the available space.
+            */}
+            <main className="flex-1 overflow-auto">
               {children}
             </main>
           </div>

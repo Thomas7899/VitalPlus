@@ -7,8 +7,8 @@
 - ✅ Benutzer-Login via **NextAuth.js** (Credentials Provider)
 - 📊 Übersichtliches Dashboard für Vitaldaten
 - 🌙 Dark Mode Unterstützung
-- 🗂 Sidebar-Navigation mit responsive Design
-- 📥 Integration einer PostgreSQL-Datenbank (Neon)
+- 🗂 Sidebar-Navigation
+- 📥 Integration einer PostgreSQL-Datenbank (Prisma)
 - 💉 Erweiterbar für Smartwatch-/Wearable-Integrationen
 - ⚙️ Modulare und erweiterbare Komponentenstruktur
 
@@ -20,10 +20,6 @@
 - **NextAuth.js** – Sichere Authentifizierung
 - **PostgreSQL** – Datenbank für Vitaldaten
 - **TypeScript** – Typensicherheit im gesamten Projekt
-
-## 🖼️ Beispiel-Screenshots
-
-*(hier kannst du später Screenshots einfügen)*
 
 ## 📦 Installation
 
@@ -58,12 +54,3 @@ NEXTAUTH_URL=http://localhost:3000
 │   └── api/
 ├── hooks/
 └── ...
-
-🤝 Mitwirken
-
-Pull Requests sind willkommen! Wenn du neue Features vorschlagen oder Bugs melden möchtest, eröffne gerne ein Issue.
-📜 Lizenz
-
-MIT License – mehr Infos
-
-    Vital+ ist ein Projekt aus Leidenschaft für moderne Webentwicklung und Gesundheit. 💙
