@@ -16,7 +16,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar/sidebar"; // Ensure path is correct
 import { Button } from "@/components/ui/button"; // Ensure path is correct
-import { Home, User, Heart } from "lucide-react";
+import { Home, User, Heart, Activity, Utensils } from "lucide-react";
 import Link from "next/link";
 
 // Initialize the fonts
@@ -78,25 +78,52 @@ export default function RootLayout({
               <SidebarContent className="flex-1 overflow-y-auto p-4">
                 <SidebarGroup>
                   <Link href="/" passHref>
-                    <Button variant="ghost" className="w-full flex justify-start items-center">
+                    <Button
+                      variant="ghost"
+                      className="w-full flex justify-start items-center"
+                    >
                       <Home className="mr-2 h-5 w-5" /> Home
                     </Button>
                   </Link>
                   <Link href="/user" passHref>
-                    <Button variant="ghost" className="w-full flex justify-start items-center">
+                    <Button
+                      variant="ghost"
+                      className="w-full flex justify-start items-center"
+                    >
                       <User className="mr-2 h-5 w-5" /> User
                     </Button>
                   </Link>
                   <Link href="/gesundheit" passHref>
-                    <Button variant="ghost" className="w-full flex justify-start items-center">
+                    <Button
+                      variant="ghost"
+                      className="w-full flex justify-start items-center"
+                    >
                       <Heart className="mr-2 h-5 w-5" /> Gesundheit
+                    </Button>
+                  </Link>
+                  <Link href="/blutdruck" passHref>
+                    <Button
+                      variant="ghost"
+                      className="w-full flex justify-start items-center"
+                    >
+                      <Activity className="mr-2 h-5 w-5" /> Blutdruck
+                    </Button>
+                  </Link>
+                  <Link href="/kalorien" passHref>
+                    <Button
+                      variant="ghost"
+                      className="w-full flex justify-start items-center"
+                    >
+                      <Utensils className="mr-2 h-5 w-5" /> Kalorien
                     </Button>
                   </Link>
                 </SidebarGroup>
               </SidebarContent>
               <SidebarFooter className="p-4 border-t border-border">
                 <SidebarTrigger>
-                  <Button variant="outline" className="w-full">Toggle Sidebar</Button>
+                  <Button variant="outline" className="w-full">
+                    Toggle Sidebar
+                  </Button>
                 </SidebarTrigger>
               </SidebarFooter>
             </Sidebar>
@@ -106,9 +133,7 @@ export default function RootLayout({
                 - overflow-auto: Allows both vertical and horizontal scrolling if the content (e.g., charts)
                                  is larger than the available space.
             */}
-            <main className="flex-1 overflow-auto">
-              {children}
-            </main>
+            <main className="flex-1 overflow-auto">{children}</main>
           </div>
         </SidebarProvider>
       </body>
