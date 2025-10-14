@@ -4,7 +4,7 @@
 
 ## ✨ Vorschau
 
-Hier ist ein kleiner Einblick, wie Vital+ auf einem mobilen Gerät aussieht (simuliertes iPhone 15):
+Hier ist ein kleiner Einblick, wie Vital+ auf einem mobilen Gerät aussieht (iPhone 15):
 
 ![Vital+ auf dem iPhone 15](docs/screenshot-iphone-15.png)
 
