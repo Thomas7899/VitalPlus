@@ -1,122 +1,130 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { CalorieChart } from "@/components/CalorieChart";
 import { CalorieTable } from "@/components/CalorieTable";
-
-interface CalorieEntry {
-  id: string;
-  meal: 'Frühstück' | 'Mittagessen' | 'Abendessen' | 'Snacks';
-  food: string;
-  calories: number;
-  date: string;
-  time: string;
-  notes?: string;
-}
+import { useCalorieEntries } from "@/hooks/useCalorieEntries";
+import { cn } from "@/lib/utils";
 
 const MEAL_TYPES = [
-  { value: 'Frühstück', label: 'Frühstück', emoji: '🍳' },
-  { value: 'Mittagessen', label: 'Mittagessen', emoji: '🍽️' },
-  { value: 'Abendessen', label: 'Abendessen', emoji: '🥘' },
-  { value: 'Snacks', label: 'Snacks/Sonstiges', emoji: '🍎' }
+  { value: "Frühstück", label: "Frühstück", emoji: "🍳" },
+  { value: "Mittagessen", label: "Mittagessen", emoji: "🍽️" },
+  { value: "Abendessen", label: "Abendessen", emoji: "🥘" },
+  { value: "Snacks", label: "Snacks/Sonstiges", emoji: "🍎" },
 ];
 
 const COMMON_FOODS = [
-  { name: 'Apfel', calories: 80 },
-  { name: 'Banane', calories: 105 },
-  { name: 'Brot (1 Scheibe)', calories: 70 },
-  { name: 'Butter (10g)', calories: 75 },
-  { name: 'Haferflocken (50g)', calories: 185 },
-  { name: 'Joghurt (150g)', calories: 85 },
-  { name: 'Milch (200ml)', calories: 120 },
-  { name: 'Müsli (50g)', calories: 200 },
-  { name: 'Nudeln (100g)', calories: 350 },
-  { name: 'Reis (100g)', calories: 350 },
+  { name: "Apfel", calories: 80 },
+  { name: "Banane", calories: 105 },
+  { name: "Brot (1 Scheibe)", calories: 70 },
+  { name: "Butter (10g)", calories: 75 },
+  { name: "Haferflocken (50g)", calories: 185 },
+  { name: "Joghurt (150g)", calories: 85 },
+  { name: "Milch (200ml)", calories: 120 },
+  { name: "Müsli (50g)", calories: 200 },
+  { name: "Nudeln (100g)", calories: 350 },
+  { name: "Reis (100g)", calories: 350 },
 ];
 
+const calorieFormSchema = z.object({
+  meal: z.enum(["Frühstück", "Mittagessen", "Abendessen", "Snacks"]),
+  food: z.string().min(1, "Lebensmittel ist erforderlich."),
+  calories: z.number().min(1, "Kalorien müssen größer als 0 sein."),
+  date: z.string().min(1, "Datum ist erforderlich."),
+  time: z.string().min(1, "Zeit ist erforderlich."),
+  notes: z.string().optional(),
+});
+
+type CalorieFormValues = z.infer<typeof calorieFormSchema>;
+
 export default function CaloriePage() {
-  const [entries, setEntries] = useState<CalorieEntry[]>([]);
-  const [formData, setFormData] = useState({
-    meal: 'Frühstück' as CalorieEntry['meal'],
-    food: '',
-    calories: 0,
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().slice(0, 5),
-    notes: ""
+  const { entries, addEntry, deleteEntry } = useCalorieEntries();
+  const [open, setOpen] = useState(false);
+
+  const form = useForm<CalorieFormValues>({
+    resolver: zodResolver(calorieFormSchema),
+    defaultValues: {
+      meal: "Frühstück",
+      food: "",
+      calories: 0,
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toTimeString().slice(0, 5),
+      notes: "",
+    },
   });
 
-  // Lokale Daten laden
-  useEffect(() => {
-    const savedEntries = localStorage.getItem('calorieEntries');
-    if (savedEntries) {
-      setEntries(JSON.parse(savedEntries));
-    }
-  }, []);
-
-  // Daten speichern
-  const saveEntry = () => {
-    if (!formData.food || formData.calories <= 0) return;
-
-    const newEntry: CalorieEntry = {
-      id: Date.now().toString(),
-      ...formData
-    };
-    
-    const updatedEntries = [...entries, newEntry].sort((a, b) => 
-      new Date(b.date + ' ' + b.time).getTime() - new Date(a.date + ' ' + a.time).getTime()
-    );
-    
-    setEntries(updatedEntries);
-    localStorage.setItem('calorieEntries', JSON.stringify(updatedEntries));
-    
-    // Form zurücksetzen
-    setFormData({
-      ...formData,
-      food: '',
+  function onSubmit(data: CalorieFormValues) {
+    addEntry(data);
+    form.reset({
+      ...data,
+      food: "",
       calories: 0,
       time: new Date().toTimeString().slice(0, 5),
-      notes: ""
+      notes: "",
     });
-  };
-
-  const deleteEntry = (id: string) => {
-    const updatedEntries = entries.filter(e => e.id !== id);
-    setEntries(updatedEntries);
-    localStorage.setItem('calorieEntries', JSON.stringify(updatedEntries));
-  };
+  }
 
   const selectCommonFood = (food: { name: string; calories: number }) => {
-    setFormData({
-      ...formData,
-      food: food.name,
-      calories: food.calories
-    });
+    form.setValue("food", food.name);
+    form.setValue("calories", food.calories);
+    setOpen(false);
   };
 
   // Tagesstatistiken berechnen
-  const getTodayStats = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayEntries = entries.filter(e => e.date === today);
-    
+  const { statsByMeal, totalCalories } = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const todayEntries = entries.filter((e) => e.date === today);
+
     const statsByMeal = MEAL_TYPES.reduce((acc, meal) => {
       acc[meal.value] = todayEntries
-        .filter(e => e.meal === meal.value)
+        .filter((e) => e.meal === meal.value)
         .reduce((sum, e) => sum + e.calories, 0);
       return acc;
     }, {} as Record<string, number>);
-    
-    const totalCalories = Object.values(statsByMeal).reduce((sum, cal) => sum + cal, 0);
-    
-    return { statsByMeal, totalCalories };
-  };
 
-  const { statsByMeal, totalCalories } = getTodayStats();
+    const totalCalories = Object.values(statsByMeal).reduce(
+      (sum, cal) => sum + cal,
+      0
+    );
+
+    return { statsByMeal, totalCalories };
+  }, [entries]);
 
   return (
     <div className="container mx-auto p-4 max-w-6xl">
@@ -125,21 +133,29 @@ export default function CaloriePage() {
       {/* Tagesübersicht */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Heute ({new Date().toLocaleDateString('de-DE')})</CardTitle>
+          <CardTitle>
+            Heute ({new Date().toLocaleDateString("de-DE")})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            {MEAL_TYPES.map(meal => (
+            {MEAL_TYPES.map((meal) => (
               <div key={meal.value} className="text-center">
                 <div className="text-2xl mb-1">{meal.emoji}</div>
-                <div className="text-sm text-muted-foreground">{meal.label}</div>
-                <div className="text-lg font-semibold">{statsByMeal[meal.value]} kcal</div>
+                <div className="text-sm text-muted-foreground">
+                  {meal.label}
+                </div>
+                <div className="text-lg font-semibold">
+                  {statsByMeal[meal.value]} kcal
+                </div>
               </div>
             ))}
           </div>
-          
+
           <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-xl font-bold">Gesamt: {totalCalories} kcal</div>
+            <div className="text-xl font-bold">
+              Gesamt: {totalCalories} kcal
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -150,118 +166,179 @@ export default function CaloriePage() {
           <CardTitle>Neue Mahlzeit erfassen</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Häufige Lebensmittel */}
-          <div className="mb-4">
-            <Label className="mb-2 block">Häufige Lebensmittel</Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-              {COMMON_FOODS.map(food => (
-                <Button
-                  key={food.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => selectCommonFood(food)}
-                  className="text-xs h-auto py-2 flex flex-col items-center"
-                >
-                  <span className="font-medium">{food.name}</span>
-                  <span className="text-xs text-muted-foreground">{food.calories} kcal</span>
-                </Button>
-              ))}
-            </div>
-          </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Mahlzeit */}
+                <FormField
+                  control={form.control}
+                  name="meal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mahlzeit</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {MEAL_TYPES.map((meal) => (
+                            <SelectItem key={meal.value} value={meal.value}>
+                              {meal.emoji} {meal.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Mahlzeit */}
-            <div>
-              <Label htmlFor="meal">Mahlzeit</Label>
-              <Select 
-                value={formData.meal} 
-                onValueChange={(value: CalorieEntry['meal']) => setFormData({...formData, meal: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MEAL_TYPES.map(meal => (
-                    <SelectItem key={meal.value} value={meal.value}>
-                      {meal.emoji} {meal.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Lebensmittel */}
+                <FormField
+                  control={form.control}
+                  name="food"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Lebensmittel</FormLabel>
+                      <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "w-full justify-between",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value || "Lebensmittel wählen..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Lebensmittel suchen..." />
+                            <CommandList>
+                              <CommandEmpty>
+                                Kein Lebensmittel gefunden.
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {COMMON_FOODS.map((food) => (
+                                  <CommandItem
+                                    value={food.name}
+                                    key={food.name}
+                                    onSelect={() => selectCommonFood(food)}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        food.name === field.value
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {food.name} ({food.calories} kcal)
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Lebensmittel */}
-            <div>
-              <Label htmlFor="food">Lebensmittel</Label>
-              <Input
-                id="food"
-                placeholder="z.B. Apfel, Brot..."
-                value={formData.food}
-                onChange={(e) => setFormData({...formData, food: e.target.value})}
-              />
-            </div>
+                {/* Kalorien */}
+                <FormField
+                  control={form.control}
+                  name="calories"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kalorien</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(parseInt(e.target.value) || 0)
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Kalorien */}
-            <div>
-              <Label htmlFor="calories">Kalorien</Label>
-              <Input
-                id="calories"
-                type="number"
-                value={formData.calories}
-                onChange={(e) => setFormData({...formData, calories: parseInt(e.target.value) || 0})}
-                min="0"
-                max="5000"
-              />
-            </div>
+                {/* Datum */}
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Datum</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Datum */}
-            <div>
-              <Label htmlFor="date">Datum</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({...formData, date: e.target.value})}
-              />
-            </div>
+                {/* Zeit */}
+                <FormField
+                  control={form.control}
+                  name="time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zeit</FormLabel>
+                      <FormControl>
+                        <Input type="time" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Zeit */}
-            <div>
-              <Label htmlFor="time">Zeit</Label>
-              <Input
-                id="time"
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({...formData, time: e.target.value})}
-              />
-            </div>
+                {/* Notizen */}
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Notizen (optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="z.B. Portion, Zubereitung..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Notizen */}
-            <div className="md:col-span-2">
-              <Label htmlFor="notes">Notizen (optional)</Label>
-              <Input
-                id="notes"
-                placeholder="z.B. Portion, Zubereitung..."
-                value={formData.notes}
-                onChange={(e) => setFormData({...formData, notes: e.target.value})}
-              />
-            </div>
-
-            <div className="flex items-end">
-              <Button 
-                onClick={saveEntry} 
-                className="w-full"
-                disabled={!formData.food || formData.calories <= 0}
-              >
-                Eintrag speichern
-              </Button>
-            </div>
-          </div>
+                {/* Button */}
+                <div className="flex items-end">
+                  <Button type="submit" className="w-full">
+                    Eintrag speichern
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 
       {/* Datenvisualisierung */}
-      {entries.length > 0 && (
+      {entries.length > 0 ? (
         <Tabs defaultValue="chart" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="chart">Diagramm</TabsTrigger>
@@ -290,12 +367,12 @@ export default function CaloriePage() {
             </Card>
           </TabsContent>
         </Tabs>
-      )}
-
-      {entries.length === 0 && (
+      ) : (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">Noch keine Einträge vorhanden. Erfassen Sie Ihre erste Mahlzeit!</p>
+            <p className="text-muted-foreground">
+              Noch keine Einträge vorhanden. Erfassen Sie Ihre erste Mahlzeit!
+            </p>
           </CardContent>
         </Card>
       )}
