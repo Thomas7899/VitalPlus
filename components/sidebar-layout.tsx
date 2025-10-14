@@ -18,6 +18,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
         className={`absolute top-4 z-50 bg-white/80 backdrop-blur-sm border-slate-200 hover:bg-white shadow-lg transition-all duration-300 ${
           sidebarOpen ? "right-4" : "left-4"
         }`}
+        style={{ top: "2.5rem" }}
       >
         {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
       </Button>
@@ -25,10 +26,10 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
       {/* Sidebar */}
       <div
         className={`${
-          sidebarOpen ? "w-72" : "w-0"
+          sidebarOpen ? "w-58" : "w-0"
         } transition-all duration-300 overflow-hidden flex-shrink-0`}
       >
-        <div className="w-72 h-full bg-white/80 backdrop-blur-xl border-r border-slate-200/50 shadow-xl shadow-slate-200/20 flex flex-col">
+        <div className="w-58 h-full bg-white/80 backdrop-blur-xl border-r border-slate-200/50 shadow-xl shadow-slate-200/20 flex flex-col">
           {/* Logo + Title */}
           <div className="p-6 border-b border-slate-200/50">
             <Link href="/" passHref>
@@ -38,7 +39,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
                 </div>
                 <div>
                   <h1 className="font-bold text-xl text-slate-800">Vital+</h1>
-                  <p className="text-sm text-slate-500">Deine Gesundheits-App</p>
+                  <p className="text-sm text-slate-500">Gesundheits-App</p>
                 </div>
               </div>
             </Link>
@@ -108,7 +109,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
 
       {/* Content */}
       <main className="flex-1 overflow-auto bg-transparent">
-        <div className="min-h-full p-8 pt-16">{children}</div>
+        <div className="min-h-full p-8 pt-20">{children}</div>
       </main>
     </div>
   );
