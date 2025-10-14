@@ -7,6 +7,7 @@ import { useUsers } from "@/hooks/useUsers";
 import { HealthFilters } from "@/components/HealthFilters";
 import { HealthChart } from "@/components/HealthChart";
 import { metrics, categories } from "@/components/metrics";
+import { HealthInsights } from "@/components/HealthInsights";
 
 export default function HealthPage() {
   const { data: users = [] } = useUsers();
@@ -33,6 +34,7 @@ export default function HealthPage() {
         setFrom={setFrom}
         setTo={setTo}
       />
+    <HealthInsights userId={selectedUser} className="mt-6" />
 
       {isLoading && <p>Lade Gesundheitsdaten...</p>}
 
