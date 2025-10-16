@@ -64,8 +64,8 @@ export default function BloodPressurePage() {
   const getBloodPressureCategory = (systolic: number, diastolic: number) => {
     if (systolic < 120 && diastolic < 80) return { category: "Normal", color: "text-green-600" };
     if (systolic < 130 && diastolic < 80) return { category: "Erhöht", color: "text-yellow-600" };
-    if (systolic < 140 || diastolic < 90) return { category: "Bluthochdruck Stufe 1", color: "text-orange-600" };
-    if (systolic < 180 || diastolic < 120) return { category: "Bluthochdruck Stufe 2", color: "text-red-600" };
+    if (systolic < 140 && diastolic < 90) return { category: "Bluthochdruck Stufe 1", color: "text-orange-600" };
+    if (systolic < 180 && diastolic < 120) return { category: "Bluthochdruck Stufe 2", color: "text-red-600" };
     return { category: "Hypertensive Krise", color: "text-red-800" };
   };
 

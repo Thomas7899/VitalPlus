@@ -1,8 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { User, Heart, Activity, Utensils, Menu, X } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  User,
+  Heart,
+  HeartPulse,
+  Activity,
+  Utensils,
+  Menu,
+  X,
+  Scale,
+  Thermometer,
+  Bed,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
@@ -48,53 +59,61 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
           {/* Navigation */}
           <div className="flex-1 overflow-y-auto p-4">
             <nav className="space-y-2">
-              <Link href="/user" passHref>
-                <Button
-                  variant="ghost"
-                  className="w-full flex justify-start items-center h-12 px-4 text-slate-700 hover:bg-green-50 hover:text-green-700 rounded-xl transition-all duration-200 group"
-                >
-                  <div className="w-10 h-10 bg-green-100 group-hover:bg-green-200 rounded-lg flex items-center justify-center mr-3 transition-colors">
-                    <User className="h-5 w-5 text-green-600" />
-                  </div>
-                  <span className="font-medium">Profil</span>
-                </Button>
+              <Link href="/user" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-green-50 hover:text-green-700">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 transition-colors group-hover:bg-green-200">
+                  <User className="h-5 w-5 text-green-600" />
+                </div>
+                <span className="font-medium">Profil</span>
               </Link>
 
-              <Link href="/gesundheit" passHref>
-                <Button
-                  variant="ghost"
-                  className="w-full flex justify-start items-center h-12 px-4 text-slate-700 hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-200 group"
-                >
-                  <div className="w-10 h-10 bg-red-100 group-hover:bg-red-200 rounded-lg flex items-center justify-center mr-3 transition-colors">
-                    <Heart className="h-5 w-5 text-red-600" />
-                  </div>
-                  <span className="font-medium">Gesundheit</span>
-                </Button>
+              <Link href="/gesundheit" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-red-50 hover:text-red-700">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 transition-colors group-hover:bg-red-200">
+                  <Heart className="h-5 w-5 text-red-600" />
+                </div>
+                <span className="font-medium">Gesundheit</span>
               </Link>
 
-              <Link href="/blutdruck" passHref>
-                <Button
-                  variant="ghost"
-                  className="w-full flex justify-start items-center h-12 px-4 text-slate-700 hover:bg-purple-50 hover:text-purple-700 rounded-xl transition-all duration-200 group"
-                >
-                  <div className="w-10 h-10 bg-purple-100 group-hover:bg-purple-200 rounded-lg flex items-center justify-center mr-3 transition-colors">
-                    <Activity className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <span className="font-medium">Blutdruck</span>
-                </Button>
+              <Link href="/blutdruck" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-purple-50 hover:text-purple-700">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 transition-colors group-hover:bg-purple-200">
+                  <Activity className="h-5 w-5 text-purple-600" />
+                </div>
+                <span className="font-medium">Blutdruck</span>
               </Link>
 
-              <Link href="/kalorien" passHref>
-                <Button
-                  variant="ghost"
-                  className="w-full flex justify-start items-center h-12 px-4 text-slate-700 hover:bg-orange-50 hover:text-orange-700 rounded-xl transition-all duration-200 group"
-                >
-                  <div className="w-10 h-10 bg-orange-100 group-hover:bg-orange-200 rounded-lg flex items-center justify-center mr-3 transition-colors">
-                    <Utensils className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <span className="font-medium">Ernährung</span>
-                </Button>
+              <Link href="/kalorien" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-orange-50 hover:text-orange-700">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 transition-colors group-hover:bg-orange-200">
+                  <Utensils className="h-5 w-5 text-orange-600" />
+                </div>
+                <span className="font-medium">Ernährung</span>
               </Link>
+              <Link href="/vitalfunktionen" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-red-50 hover:text-red-700">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 transition-colors group-hover:bg-red-200">
+                  <HeartPulse className="h-5 w-5 text-red-600" />
+                </div>
+                <span className="font-medium">Vitalfunktionen</span>
+              </Link>
+
+              <Link href="/koerperzusammensetzung" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 transition-colors group-hover:bg-blue-200">
+                  <Scale className="h-5 w-5 text-blue-600" />
+                </div>
+                <span className="font-medium">Körper</span>
+              </Link>
+
+              <Link href="/koerperzustand" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-yellow-50 hover:text-yellow-700">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100 transition-colors group-hover:bg-yellow-200">
+                  <Thermometer className="h-5 w-5 text-yellow-600" />
+                </div>
+                <span className="font-medium">Zustand</span>
+              </Link>
+
+              <Link href="/regeneration" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-700">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 transition-colors group-hover:bg-indigo-200">
+                  <Bed className="h-5 w-5 text-indigo-600" />
+                </div>
+                <span className="font-medium">Regeneration</span>
+              </Link>
+
             </nav>
           </div>
 
