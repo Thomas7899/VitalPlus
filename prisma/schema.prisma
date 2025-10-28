@@ -12,6 +12,9 @@ model User {
   email      String       @unique
   name       String?
   createdAt  DateTime     @default(now())
+  dateOfBirth DateTime?
+  gender     String?
+  height     Float?       // Körpergröße in Metern
   healthData HealthData[] 
 }
 
@@ -23,10 +26,10 @@ model HealthData {
   heartRate       Int?
   sleepHours      Float?
   weight          Float?
-  height          Float?  
   calories        Float?  
   respiratoryRate Int?    
-  bloodPressure   String?
+  bloodPressureSystolic  Int? // Systolischer Wert
+  bloodPressureDiastolic Int? // Diastolischer Wert
   bloodGroup      String? 
   bmi             Float?  
   bodyTemp        Float?  
@@ -34,9 +37,8 @@ model HealthData {
   stairSteps      Int?    
   elevation       Float?  
   muscleMass      Float?  
-  bodyFat         Float?  
+  bodyFat         Float?
+  mealType        String?  
   medications     String? 
   user            User     @relation(fields: [userId], references: [id])
 }
-
-
