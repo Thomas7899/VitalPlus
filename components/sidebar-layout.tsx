@@ -28,7 +28,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-lg">V+</span>
               </div>
-              <div>
+              <div className="font-normal">
                 <h1 className="font-bold text-xl text-slate-800">Vital+</h1>
                 <p className="text-sm text-slate-500">Gesundheits-App</p>
               </div>
