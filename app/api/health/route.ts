@@ -12,18 +12,19 @@ const healthSchema = z.object({
   heartRate: z.number().int().optional(),
   sleepHours: z.number().optional(),
   weight: z.number().optional(),
-  height: z.number().optional(),
   calories: z.number().optional(),
   respiratoryRate: z.number().int().optional(),
-  bloodPressure: z.string().optional(),
+  bloodPressureSystolic: z.number().int().optional(),
+  bloodPressureDiastolic: z.number().int().optional(),
   bloodGroup: z.string().optional(),
   bmi: z.number().optional(),
   bodyTemp: z.number().optional(),
-  oxygenSaturation: z.number().optional(),
+  oxygenSaturation: z.number().optional(), // War vorher fälschlicherweise string
   stairSteps: z.number().int().optional(),
   elevation: z.number().optional(),
   muscleMass: z.number().optional(),
   bodyFat: z.number().optional(),
+  mealType: z.string().optional(),
   medications: z.string().optional(),
 });
 
@@ -46,10 +47,10 @@ export async function POST(req: NextRequest) {
       heartRate,
       sleepHours,
       weight,
-      height,
       calories,
       respiratoryRate,
-      bloodPressure,
+      bloodPressureSystolic,
+      bloodPressureDiastolic,
       bloodGroup,
       bmi,
       bodyTemp,
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       elevation,
       muscleMass,
       bodyFat,
+      mealType,
       medications,
     } = parseResult.data;
 
@@ -70,10 +72,10 @@ export async function POST(req: NextRequest) {
         heartRate,
         sleepHours,
         weight,
-        height,
         calories,
         respiratoryRate,
-        bloodPressure,
+        bloodPressureSystolic,
+        bloodPressureDiastolic,
         bloodGroup,
         bmi,
         bodyTemp,
@@ -82,6 +84,7 @@ export async function POST(req: NextRequest) {
         elevation,
         muscleMass,
         bodyFat,
+        mealType,
         medications,
       },
     });
@@ -104,17 +107,17 @@ export async function GET(req: NextRequest) {
     const data = await prisma.healthData.findMany({
       where: {
         ...(userId ? { userId } : {}),
-        ...(from || to
-          ? {
-              date: {
-                ...(from ? { gte: new Date(from) } : {}),
-                ...(to ? { lte: new Date(to) } : {}),
-              },
-            }
-          : {}),
+        ...(from && {
+          date: {
+            gte: new Date(from),
+          },
+        }),
+        ...(to && {
+          date: { lte: new Date(to) },
+        }),
       },
       orderBy: { date: "desc" },
-      take: 100,
+      take: 2000, // Erhöht, um alle Daten des Jahres zu laden
     });
 
     return NextResponse.json(data);
@@ -123,5 +126,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
 }
-
-

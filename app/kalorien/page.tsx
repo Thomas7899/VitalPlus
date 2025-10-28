@@ -4,42 +4,20 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Check, ChevronsUpDown } from "lucide-react";
+import useSWR, { mutate } from "swr";
+import { toast } from "sonner";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalorieChart } from "@/components/CalorieChart";
 import { CalorieTable } from "@/components/CalorieTable";
-import { useCalorieEntries } from "@/hooks/useCalorieEntries";
 import { cn } from "@/lib/utils";
 
 const MEAL_TYPES = [
@@ -49,23 +27,10 @@ const MEAL_TYPES = [
   { value: "Snacks", label: "Snacks/Sonstiges", emoji: "🍎" },
 ];
 
-const COMMON_FOODS = [
-  { name: "Apfel", calories: 80 },
-  { name: "Banane", calories: 105 },
-  { name: "Brot (1 Scheibe)", calories: 70 },
-  { name: "Butter (10g)", calories: 75 },
-  { name: "Haferflocken (50g)", calories: 185 },
-  { name: "Joghurt (150g)", calories: 85 },
-  { name: "Milch (200ml)", calories: 120 },
-  { name: "Müsli (50g)", calories: 200 },
-  { name: "Nudeln (100g)", calories: 350 },
-  { name: "Reis (100g)", calories: 350 },
-];
-
 const calorieFormSchema = z.object({
   meal: z.enum(["Frühstück", "Mittagessen", "Abendessen", "Snacks"]),
   food: z.string().min(1, "Lebensmittel ist erforderlich."),
-  calories: z.number().min(1, "Kalorien müssen größer als 0 sein."),
+  calories: z.coerce.number().min(1, "Kalorien müssen größer als 0 sein."),
   date: z.string().min(1, "Datum ist erforderlich."),
   time: z.string().min(1, "Zeit ist erforderlich."),
   notes: z.string().optional(),
@@ -73,9 +38,17 @@ const calorieFormSchema = z.object({
 
 type CalorieFormValues = z.infer<typeof calorieFormSchema>;
 
-export default function CaloriePage() {
-  const { entries, addEntry, deleteEntry } = useCalorieEntries();
-  const [open, setOpen] = useState(false);
+// Helper-Funktion für SWR zum Fetchen von Daten
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export default function KalorienPage() {
+  const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1"; // Feste User-ID
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: healthData = [], error, isLoading } = useSWR(
+    `/api/health?userId=${userId}`,
+    fetcher
+  );
 
   const form = useForm<CalorieFormValues>({
     resolver: zodResolver(calorieFormSchema),
@@ -89,78 +62,57 @@ export default function CaloriePage() {
     },
   });
 
-  function onSubmit(data: CalorieFormValues) {
-    addEntry(data);
-    form.reset({
-      ...data,
-      food: "",
-      calories: 0,
-      time: new Date().toTimeString().slice(0, 5),
-      notes: "",
-    });
+  async function onSubmit(data: CalorieFormValues) {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          date: `${data.date}T${data.time}:00`,
+          calories: data.calories,
+          mealType: data.meal,
+          notes: `${data.food}${data.notes ? ` - ${data.notes}` : ''}`,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Fehler beim Speichern der Mahlzeit.");
+
+      toast.success("Mahlzeit erfolgreich gespeichert!");
+      mutate(`/api/health?userId=${userId}`);
+      form.reset({
+        ...form.getValues(),
+        food: "",
+        calories: 0,
+        notes: "",
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  const selectCommonFood = (food: { name: string; calories: number }) => {
-    form.setValue("food", food.name);
-    form.setValue("calories", food.calories);
-    setOpen(false);
-  };
-
-  // Tagesstatistiken berechnen
-  const { statsByMeal, totalCalories } = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
-    const todayEntries = entries.filter((e) => e.date === today);
-
-    const statsByMeal = MEAL_TYPES.reduce((acc, meal) => {
-      acc[meal.value] = todayEntries
-        .filter((e) => e.meal === meal.value)
-        .reduce((sum, e) => sum + e.calories, 0);
-      return acc;
-    }, {} as Record<string, number>);
-
-    const totalCalories = Object.values(statsByMeal).reduce(
-      (sum, cal) => sum + cal,
-      0
-    );
-
-    return { statsByMeal, totalCalories };
-  }, [entries]);
+  const calorieData = useMemo(() =>
+    healthData
+      .filter((d: any) => d.calories != null)
+      .map((d: any) => ({
+        id: d.id,
+        date: new Date(d.date).toISOString().split('T')[0],
+        time: new Date(d.date).toTimeString().slice(0, 5),
+        meal: d.mealType || 'Snacks',
+        food: d.notes?.split(' - ')[0] || 'Unbekannt',
+        calories: d.calories,
+      }))
+      .sort((a: any, b: any) => new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime()),
+    [healthData]
+  );
 
   return (
     <div className="container mx-auto p-4 max-w-6xl">
       <h1 className="text-3xl font-bold mb-6">Kalorien Tracker</h1>
 
-      {/* Tagesübersicht */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>
-            Heute ({new Date().toLocaleDateString("de-DE")})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            {MEAL_TYPES.map((meal) => (
-              <div key={meal.value} className="text-center">
-                <div className="text-2xl mb-1">{meal.emoji}</div>
-                <div className="text-sm text-muted-foreground">
-                  {meal.label}
-                </div>
-                <div className="text-lg font-semibold">
-                  {statsByMeal[meal.value]} kcal
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-xl font-bold">
-              Gesamt: {totalCalories} kcal
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Eingabeform */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Neue Mahlzeit erfassen</CardTitle>
@@ -169,21 +121,15 @@ export default function CaloriePage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Mahlzeit */}
                 <FormField
                   control={form.control}
                   name="meal"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Mahlzeit</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {MEAL_TYPES.map((meal) => (
@@ -197,87 +143,32 @@ export default function CaloriePage() {
                     </FormItem>
                   )}
                 />
-
-                {/* Lebensmittel */}
                 <FormField
                   control={form.control}
                   name="food"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Lebensmittel</FormLabel>
-                      <Popover open={open} onOpenChange={setOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value || "Lebensmittel wählen..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                          <Command>
-                            <CommandInput placeholder="Lebensmittel suchen..." />
-                            <CommandList>
-                              <CommandEmpty>
-                                Kein Lebensmittel gefunden.
-                              </CommandEmpty>
-                              <CommandGroup>
-                                {COMMON_FOODS.map((food) => (
-                                  <CommandItem
-                                    value={food.name}
-                                    key={food.name}
-                                    onSelect={() => selectCommonFood(food)}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        food.name === field.value
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      )}
-                                    />
-                                    {food.name} ({food.calories} kcal)
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Kalorien */}
-                <FormField
-                  control={form.control}
-                  name="calories"
-                  render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Kalorien</FormLabel>
+                      <FormLabel>Lebensmittel</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseInt(e.target.value) || 0)
-                          }
-                        />
+                        <Input placeholder="z.B. Apfel, Joghurt..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                {/* Datum */}
+                <FormField
+                  control={form.control}
+                  name="calories"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kalorien (kcal)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="date"
@@ -291,8 +182,6 @@ export default function CaloriePage() {
                     </FormItem>
                   )}
                 />
-
-                {/* Zeit */}
                 <FormField
                   control={form.control}
                   name="time"
@@ -306,8 +195,6 @@ export default function CaloriePage() {
                     </FormItem>
                   )}
                 />
-
-                {/* Notizen */}
                 <FormField
                   control={form.control}
                   name="notes"
@@ -315,19 +202,15 @@ export default function CaloriePage() {
                     <FormItem className="md:col-span-2">
                       <FormLabel>Notizen (optional)</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="z.B. Portion, Zubereitung..."
-                          {...field}
-                        />
+                        <Input placeholder="z.B. Portion, Zubereitung..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                {/* Button */}
                 <div className="flex items-end">
-                  <Button type="submit" className="w-full">
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Eintrag speichern
                   </Button>
                 </div>
@@ -337,42 +220,43 @@ export default function CaloriePage() {
         </CardContent>
       </Card>
 
-      {/* Datenvisualisierung */}
-      {entries.length > 0 ? (
+      {isLoading && (
+        <Card><CardContent className="text-center py-8 flex justify-center items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> <p>Lade Kaloriendaten...</p></CardContent></Card>
+      )}
+      {!isLoading && error && (
+        <Card><CardContent className="text-center py-8 text-red-600">Fehler beim Laden der Daten.</CardContent></Card>
+      )}
+
+      {!isLoading && calorieData.length > 0 && (
         <Tabs defaultValue="chart" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="chart">Diagramm</TabsTrigger>
             <TabsTrigger value="table">Tabelle</TabsTrigger>
           </TabsList>
-
           <TabsContent value="chart">
-            <Card>
-              <CardHeader>
-                <CardTitle>Kalorienverlauf</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CalorieChart data={entries} />
+            <Card className="bg-slate-900 border-slate-800">
+              <CardContent className="p-2 md:p-6">
+                <CalorieChart data={calorieData} />
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="table">
             <Card>
               <CardHeader>
-                <CardTitle>Alle Einträge ({entries.length})</CardTitle>
+                <CardTitle>Alle Einträge ({calorieData.length})</CardTitle>
               </CardHeader>
               <CardContent>
-                <CalorieTable data={entries} onDelete={deleteEntry} />
+                <CalorieTable data={calorieData} onDelete={() => toast.info("Löschen noch nicht implementiert.")} />
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-      ) : (
+      )}
+
+      {!isLoading && calorieData.length === 0 && (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">
-              Noch keine Einträge vorhanden. Erfassen Sie Ihre erste Mahlzeit!
-            </p>
+            <p className="text-muted-foreground">Noch keine Kaloriendaten vorhanden. Erfassen Sie Ihre erste Mahlzeit!</p>
           </CardContent>
         </Card>
       )}

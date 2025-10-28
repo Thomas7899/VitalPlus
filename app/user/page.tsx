@@ -1,135 +1,179 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import useSWR, { mutate } from "swr";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type User = {
-  id: string;
-  name: string;
-  email: string;
-};
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const userSchema = z.object({
-  name: z.string().min(3, "Name muss mindestens 3 Zeichen haben"),
-  email: z.string().email("Ungültige E-Mail"),
+const profileSchema = z.object({
+  name: z.string().min(2, "Name muss mindestens 2 Zeichen haben."),
+  email: z.string().email("Ungültige E-Mail-Adresse."),
+  height: z.coerce.number().positive("Größe muss positiv sein.").optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional(),
 });
 
-export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [editUser, setEditUser] = useState<User | null>(null);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+type ProfileFormValues = z.infer<typeof profileSchema>;
+
+export default function UserProfilePage() {
+  const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1"; // Feste User-ID
+
+  const { data: user, error, isLoading, mutate: mutateUser } = useSWR(`/api/users?id=${userId}`, fetcher);
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      height: 0,
+      dateOfBirth: "",
+      gender: "",
+    },
+  });
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const res = await fetch("/api/users");
-      const data = await res.json();
-      setUsers(data);
-    };
-
-    fetchUsers();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = userSchema.safeParse({ name, email });
-
-    if (!result.success) {
-      const newErrors: { [key: string]: string } = {};
-      result.error.errors.forEach((error) => {
-        newErrors[error.path[0]] = error.message;
+    if (user) {
+      form.reset({
+        name: user.name || "",
+        email: user.email || "",
+        height: user.height || 0,
+        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : "",
+        gender: user.gender || "",
       });
-      setErrors(newErrors);
-      return;
     }
+  }, [user, form]);
 
-    setErrors({});
-    const method = editUser ? "PUT" : "POST";
-    const res = await fetch("/api/users", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, ...(editUser ? { id: editUser.id } : {}) }),
-    });
+  async function onSubmit(data: ProfileFormValues) {
+    try {
+      const response = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, id: userId }),
+      });
 
-    if (res.ok) {
-      setName("");
-      setEmail("");
-      setEditUser(null);
-      const updated = await fetch("/api/users").then((res) => res.json());
-      setUsers(updated);
+      if (!response.ok) {
+        throw new Error("Fehler beim Aktualisieren des Profils.");
+      }
+
+      toast.success("Profil erfolgreich aktualisiert!");
+      mutateUser();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten.");
     }
-  };
+  }
 
-  const handleDelete = async (id: string) => {
-    const res = await fetch("/api/users", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-
-    if (res.ok) {
-      const updated = await fetch("/api/users").then((res) => res.json());
-      setUsers(updated);
-    }
-  };
-
-  const handleEdit = (user: User) => {
-    setName(user.name ?? "");
-    setEmail(user.email ?? "");
-    setEditUser(user); // wichtig!
-  };
+  if (isLoading) return <div className="container mx-auto p-4 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  if (error) return <div className="container mx-auto p-4 text-red-500">Fehler beim Laden der Benutzerdaten.</div>;
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">User Verwaltung</h1>
-
-      <form
-        onSubmit={handleSubmit}
-        className="mb-8 p-6 bg-white rounded shadow-md max-w-lg mx-auto"
-      >
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">Name</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
-          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">E-Mail</label>
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} />
-          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-        </div>
-
-        <Button type="submit">{editUser ? "Aktualisieren" : "Erstellen"}</Button>
-      </form>
-
-      <div className="max-w-2xl mx-auto">
-        <h2 className="text-xl font-semibold mb-4">Benutzerliste</h2>
-        <ul className="space-y-4">
-          {users.map((user) => (
-            <li key={user.id} className="flex justify-between items-center bg-gray-100 p-4 rounded shadow-sm">
-              <div>
-                <p className="font-semibold">{user.name}</p>
-                <p className="text-sm text-gray-600">{user.email}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleEdit(user)}>Bearbeiten</Button>
-                <Button variant="destructive" onClick={() => handleDelete(user.id)}>Löschen</Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+    <div className="container mx-auto p-4 max-w-2xl">
+      <h1 className="text-3xl font-bold mb-6">Mein Profil</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Persönliche Daten</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-Mail</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Geburtsdatum</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Geschlecht</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Bitte auswählen" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="männlich">Männlich</SelectItem>
+                        <SelectItem value="weiblich">Weiblich</SelectItem>
+                        <SelectItem value="divers">Divers</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="height"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Größe (in m)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Speichern
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

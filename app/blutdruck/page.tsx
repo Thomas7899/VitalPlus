@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import useSWR, { mutate } from "swr";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,8 @@ import {
 } from "@/components/ui/form";
 import { BloodPressureChart } from "@/components/BloodPressureChart";
 import { BloodPressureTable } from "@/components/BloodPressureTable";
-import { useBloodPressure } from "@/hooks/useBloodPressure";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const PRESET_VALUES = {
   systolic: [90, 100, 110, 120, 130, 140, 150, 160, 170, 180],
@@ -27,8 +29,8 @@ const PRESET_VALUES = {
 };
 
 const bloodPressureFormSchema = z.object({
-  systolic: z.number(),
-  diastolic: z.number(),
+  systolic: z.coerce.number().min(1, "Erforderlich"),
+  diastolic: z.coerce.number().min(1, "Erforderlich"),
   pulse: z.number().optional(),
   date: z.string().min(1, "Datum ist erforderlich."),
   time: z.string().min(1, "Zeit ist erforderlich."),
@@ -37,8 +39,22 @@ const bloodPressureFormSchema = z.object({
 
 type BloodPressureFormValues = z.infer<typeof bloodPressureFormSchema>;
 
+// Helper-Funktion für SWR zum Fetchen von Daten
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function BloodPressurePage() {
-  const { readings, addReading, deleteReading } = useBloodPressure();
+  const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1"; // Feste User-ID
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Daten-Fetching mit SWR
+  const { data: readings = [], error, isLoading } = useSWR(
+    `/api/health?userId=${userId}`,
+    fetcher,
+    {
+      // Nur Einträge mit Blutdruckwerten filtern
+      revalidateOnFocus: false, // Optional: verhindert Neuladen bei Fokus
+    }
+  );
 
   const form = useForm<BloodPressureFormValues>({
     resolver: zodResolver(bloodPressureFormSchema),
@@ -52,13 +68,48 @@ export default function BloodPressurePage() {
     },
   });
 
-  function onSubmit(data: BloodPressureFormValues) {
-    addReading(data);
-    form.reset({
-      ...data, // Behält die meisten Werte bei
-      time: new Date().toTimeString().slice(0, 5), // Setzt nur Zeit und Notizen zurück
-      notes: "",
-    });
+
+  async function onSubmit(data: BloodPressureFormValues) {
+    if (!userId) {
+      toast.error("Kein Nutzer ausgewählt.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          date: `${data.date}T${data.time}:00`,
+          bloodPressureSystolic: data.systolic,
+          bloodPressureDiastolic: data.diastolic,
+          heartRate: data.pulse, // Puls als Herzfrequenz speichern
+          notes: data.notes,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Fehler beim Speichern der Messung.");
+
+      toast.success("Messung erfolgreich gespeichert!");
+      // Lokale SWR-Daten neu validieren, um die UI zu aktualisieren
+      mutate(`/api/health?userId=${userId}`);
+      form.reset({
+        ...form.getValues(),
+        time: new Date().toTimeString().slice(0, 5),
+        notes: "",
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const deleteReading = async (id: string) => {
+    // Löschfunktion muss noch implementiert werden (z.B. über eine DELETE API-Route)
+    // Vorerst nur eine Benachrichtigung
+    toast.info("Löschfunktion noch nicht implementiert.");
   }
 
   const getBloodPressureCategory = (systolic: number, diastolic: number) => {
@@ -75,6 +126,22 @@ export default function BloodPressurePage() {
   const currentCategory = useMemo(
     () => getBloodPressureCategory(watchedSystolic, watchedDiastolic),
     [watchedSystolic, watchedDiastolic]
+  );
+
+  const filteredReadings = useMemo(() => 
+    readings
+      .filter((r: any) => r.bloodPressureSystolic != null)
+      .map((r: any) => ({ 
+        id: r.id,
+        systolic: r.bloodPressureSystolic,
+        diastolic: r.bloodPressureDiastolic,
+        pulse: r.heartRate,
+        notes: r.notes,
+        time: new Date(r.date).toTimeString().slice(0,5), 
+        date: new Date(r.date).toISOString().split('T')[0]
+      }))
+      .sort((a: any, b: any) => new Date(b.date + 'T' + b.time).getTime() - new Date(a.date + 'T' + a.time).getTime())
+    , [readings]
   );
 
   return (
@@ -95,7 +162,7 @@ export default function BloodPressurePage() {
                   name="systolic"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Systolisch (mmHg)</FormLabel>
+                      <FormLabel>Systolisch (mmHg)</FormLabel> 
                       <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value.toString()}>
                         <FormControl>
                           <SelectTrigger>
@@ -193,8 +260,9 @@ export default function BloodPressurePage() {
                 />
 
                 <div className="flex items-end">
-                  <Button type="submit" className="w-full">
-                    Messung speichern
+                  <Button type="submit" className="w-full" disabled={isSubmitting || !userId}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {isSubmitting ? "Speichern..." : "Messung speichern"}
                   </Button>
                 </div>
               </div>
@@ -214,7 +282,14 @@ export default function BloodPressurePage() {
       </Card>
 
       {/* Datenvisualisierung */}
-      {readings.length > 0 && (
+      {isLoading && (
+        <Card><CardContent className="text-center py-8 flex justify-center items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> <p>Lade Messungen...</p></CardContent></Card>
+      )}
+      {!isLoading && error && (
+        <Card><CardContent className="text-center py-8 text-red-600">Fehler beim Laden der Daten.</CardContent></Card>
+      )}
+
+      {!isLoading && filteredReadings.length > 0 && (
         <Tabs defaultValue="chart" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="chart">Diagramm</TabsTrigger>
@@ -227,7 +302,7 @@ export default function BloodPressurePage() {
                 <CardTitle>Blutdruckverlauf</CardTitle>
               </CardHeader>
               <CardContent>
-                <BloodPressureChart data={readings} />
+                <BloodPressureChart data={filteredReadings} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -235,17 +310,17 @@ export default function BloodPressurePage() {
           <TabsContent value="table">
             <Card>
               <CardHeader>
-                <CardTitle>Messwerte ({readings.length} Einträge)</CardTitle>
+                <CardTitle>Messwerte ({filteredReadings.length} Einträge)</CardTitle>
               </CardHeader>
               <CardContent>
-                <BloodPressureTable data={readings} onDelete={deleteReading} />
+                <BloodPressureTable data={filteredReadings} onDelete={deleteReading} />
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       )}
 
-      {readings.length === 0 && (
+      {!isLoading && filteredReadings.length === 0 && (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">Noch keine Messungen vorhanden. Erfassen Sie Ihre erste Messung!</p>

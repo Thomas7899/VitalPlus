@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface CalorieEntry {
@@ -23,7 +24,37 @@ const MEAL_COLORS = {
   'Snacks': '#EF4444'
 };
 
+/**
+ * Eine barrierefreie Tabelle zur Darstellung von Diagrammdaten für Screenreader.
+ * Sie wird visuell versteckt, aber von assistiven Technologien gelesen.
+ */
+function AccessibleDataGrid({ data, caption, headers }: { data: any[], caption: string, headers: string[] }) {
+  return (
+    <div className="sr-only">
+      <table>
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            {headers.map(header => <th key={header}>{header}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, index) => (
+            <tr key={index}>
+              {headers.map(header => <td key={`${header}-${index}`}>{row[header] ?? row[header.toLowerCase()] ?? '0'}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function CalorieChart({ data }: CalorieChartProps) {
+  // Eindeutige IDs für ARIA-Attribute generieren
+  const barChartTitleId = useId();
+  const pieChartTitleId = useId();
+
   // Tägliche Daten gruppieren
   const dailyData = data.reduce((acc, entry) => {
     const date = entry.date;
@@ -86,11 +117,16 @@ export function CalorieChart({ data }: CalorieChartProps) {
   return (
     <div className="space-y-6">
       {/* Täglicher Verlauf */}
-      <div>
-        <h4 className="text-md font-semibold mb-4 text-white">Täglicher Kalorienverlauf (14 Tage)</h4>
+      <div role="group" aria-labelledby={barChartTitleId}>
+        <h4 id={barChartTitleId} className="text-md font-semibold mb-4 text-white">Täglicher Kalorienverlauf (14 Tage)</h4>
         <div className="w-full h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <title>Balkendiagramm: Täglicher Kalorienverlauf</title>
+              <desc>
+                Ein gestapeltes Balkendiagramm, das die tägliche Kalorienaufnahme der letzten 14 Tage,
+                aufgeteilt nach Mahlzeiten (Frühstück, Mittagessen, Abendessen, Snacks), darstellt.
+              </desc>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="displayDate" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} label={{ value: 'kcal', angle: -90, position: 'insideLeft' }} />
@@ -103,15 +139,24 @@ export function CalorieChart({ data }: CalorieChartProps) {
             </BarChart>
           </ResponsiveContainer>
         </div>
+        <AccessibleDataGrid
+          data={chartData}
+          caption="Tabelle: Täglicher Kalorienverlauf der letzten 14 Tage in kcal."
+          headers={['date', 'Frühstück', 'Mittagessen', 'Abendessen', 'Snacks', 'total']}
+        />
       </div>
 
       {/* Heutige Verteilung */}
       {todayData.length > 0 && (
-        <div>
-          <h4 className="text-md font-semibold mb-4 text-white">Heutige Kalorienverteilung</h4>
+        <div role="group" aria-labelledby={pieChartTitleId}>
+          <h4 id={pieChartTitleId} className="text-md font-semibold mb-4 text-white">Heutige Kalorienverteilung</h4>
           <div className="w-full h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
+                <title>Kreisdiagramm: Heutige Kalorienverteilung</title>
+                <desc>
+                  Ein Kreisdiagramm, das die prozentuale Verteilung der heute konsumierten Kalorien auf die Mahlzeiten anzeigt.
+                </desc>
                 <Pie
                   data={todayData}
                   cx="50%"
@@ -130,6 +175,11 @@ export function CalorieChart({ data }: CalorieChartProps) {
               </PieChart>
             </ResponsiveContainer>
           </div>
+          <AccessibleDataGrid
+            data={todayData}
+            caption="Tabelle: Heutige Kalorienverteilung nach Mahlzeit."
+            headers={['name', 'value']}
+          />
         </div>
       )}
     </div>

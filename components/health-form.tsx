@@ -24,24 +24,27 @@ import {
 import { toast } from "sonner";
 
 const healthFormSchema = z.object({
-  date: z.string().min(1, "Datum ist erforderlich"),
-  steps: z.number().min(0).optional(),
-  heartRate: z.number().min(0).optional(),
-  sleepHours: z.number().min(0).max(24).optional(),
-  weight: z.number().min(0).optional(),
-  height: z.number().min(0).optional(),
-  calories: z.number().min(0).optional(),
-  respiratoryRate: z.number().min(0).optional(),
-  bloodPressure: z.string().optional(),
-  bloodGroup: z.string().optional(),
-  bmi: z.number().min(0).optional(),
-  bodyTemp: z.number().min(0).optional(),
-  oxygenSaturation: z.number().min(0).max(100).optional(),
-  stairSteps: z.number().min(0).optional(),
-  elevation: z.number().min(0).optional(),
-  muscleMass: z.number().min(0).max(100).optional(),
-  bodyFat: z.number().min(0).max(100).optional(),
-  medications: z.string().optional(),
+    date: z.string().min(1, "Datum ist erforderlich"),
+    // Leere Strings zu undefined umwandeln und dann als Zahl parsen.
+    // Dies verbessert die Handhabung optionaler numerischer Felder.
+    steps: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).int("Muss eine ganze Zahl sein").min(0).optional()),
+    heartRate: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).int("Muss eine ganze Zahl sein").min(0).optional()),
+    sleepHours: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).max(24).optional()),
+    weight: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).optional()),
+    height: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).optional()),
+    calories: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).optional()),
+    respiratoryRate: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).int("Muss eine ganze Zahl sein").min(0).optional()),
+    bloodPressureSystolic: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).int("Muss eine ganze Zahl sein").min(0).optional()),
+    bloodPressureDiastolic: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).int("Muss eine ganze Zahl sein").min(0).optional()),
+    bloodGroup: z.string().optional(),
+    bmi: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).optional()),
+    bodyTemp: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).optional()),
+    oxygenSaturation: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).max(100).optional()),
+    stairSteps: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).int("Muss eine ganze Zahl sein").min(0).optional()),
+    elevation: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).optional()),
+    muscleMass: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).max(100).optional()),
+    bodyFat: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).max(100).optional()),
+    medications: z.string().optional(),
 });
 
 type HealthFormValues = z.infer<typeof healthFormSchema>;
@@ -124,9 +127,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Schritte</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -142,9 +146,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Herzfrequenz (bpm)</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -160,10 +165,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Schlafstunden</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         step="0.5"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -179,10 +184,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Gewicht (kg)</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         step="0.1"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -198,10 +203,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Größe (cm)</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         step="0.1"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -217,10 +222,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Kalorien</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         step="0.1"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -236,9 +241,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Atemfrequenz</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -247,17 +253,31 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
               />
 
               <FormField
-                control={form.control}
-                name="bloodPressure"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Blutdruck (systolisch/diastolisch)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="120/80" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                  control={form.control}
+                  name="bloodPressureSystolic"
+                  render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Blutdruck (Systolisch)</FormLabel>
+                          <FormControl>
+                              <Input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="120" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )}
+              />
+
+              <FormField
+                  control={form.control}
+                  name="bloodPressureDiastolic"
+                  render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Blutdruck (Diastolisch)</FormLabel>
+                          <FormControl>
+                              <Input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="80" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )}
               />
 
               <FormField
@@ -282,10 +302,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>BMI</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         step="0.1"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -301,10 +321,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Körpertemperatur (°C)</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         step="0.1"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -320,9 +340,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Sauerstoffsättigung (%)</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -338,9 +359,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Treppenstufen</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -356,9 +378,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Höhenmeter</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -374,10 +397,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Muskelfettanteil</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         step="0.1"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -393,10 +416,10 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
                     <FormLabel>Fettanteil</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         step="0.1"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />

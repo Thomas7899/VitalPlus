@@ -28,7 +28,7 @@ interface HealthInsightsProps {
 }
 
 export function HealthInsights({ userId, className }: HealthInsightsProps) {
-  const [insights, setInsights] = useState<Insight[]>([]);
+  const [insights, setInsights] = useState<Insight[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +42,7 @@ export function HealthInsights({ userId, className }: HealthInsightsProps) {
 
   useEffect(() => {
     if (!userId) {
-      setInsights([]);
+      setInsights(null);
       setError(null);
       return;
     }
@@ -67,7 +67,7 @@ export function HealthInsights({ userId, className }: HealthInsightsProps) {
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(err instanceof Error ? err.message : "Unbekannter Fehler");
-        setInsights([]);
+        setInsights(null);
       } finally {
         setIsLoading(false);
       }
@@ -100,23 +100,16 @@ export function HealthInsights({ userId, className }: HealthInsightsProps) {
   };
 
   const renderContent = () => {
-    if (!userId) {
-      return (
-        <Card className="border-dashed border-slate-300 bg-white/70 backdrop-blur-sm">
-          <CardContent className="p-6 text-sm text-slate-500">
-            Wähle einen Nutzer, um personalisierte Insights zu sehen.
-          </CardContent>
-        </Card>
-      );
-    }
-
     if (isLoading) {
       return (
         <Card className="bg-white/70 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-slate-800">Trend-Insights</CardTitle>
           </CardHeader>
-          <CardContent className="py-12 flex flex-col items-center justify-center gap-2 text-slate-500">
+          <CardContent
+            className="py-12 flex flex-col items-center justify-center gap-2 text-slate-500"
+            role="status"
+          >
             <Loader2 className="h-6 w-6 animate-spin" />
             Lade Insights...
           </CardContent>
@@ -126,7 +119,7 @@ export function HealthInsights({ userId, className }: HealthInsightsProps) {
 
     if (error) {
       return (
-        <Card className="bg-white/70 backdrop-blur-sm border border-rose-200">
+        <Card className="bg-white/70 backdrop-blur-sm border border-rose-200" role="alert">
           <CardHeader className="flex flex-row items-center gap-2 text-rose-600">
             <AlertCircle className="h-5 w-5" />
             <CardTitle className="text-base font-semibold">Fehler</CardTitle>
@@ -136,13 +129,13 @@ export function HealthInsights({ userId, className }: HealthInsightsProps) {
       );
     }
 
-    if (insights.length === 0) {
+    if (!insights || insights.length === 0) {
       return (
         <Card className="bg-white/70 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-slate-800">Trend-Insights</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-slate-500">
+          <CardContent className="text-sm text-slate-500" role="status">
             Keine ausreichenden Daten für Trendanalysen vorhanden.
           </CardContent>
         </Card>
@@ -150,58 +143,56 @@ export function HealthInsights({ userId, className }: HealthInsightsProps) {
     }
 
     return (
-      <Card className="bg-white/70 backdrop-blur-sm">
-        <CardHeader className="flex flex-col gap-1">
-          <CardTitle className="text-slate-800">Trend-Insights</CardTitle>
-          <p className="text-sm text-slate-500">
-            Automatisch generierte Empfehlungen basierend auf den letzten Messwerten.
-          </p>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
+      <div aria-labelledby="insights-title">
+        <h2 id="insights-title" className="text-2xl font-bold text-slate-800 mb-6">Aktuelle Trends</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {insights.map((insight) => {
             const meta = metricMap[insight.metric];
             const trend = trendIconMap[insight.trend];
-            const delta = Math.round(insight.delta * 1000) / 10;
+            const delta = Math.round(insight.delta * 100) / 100;
+            const deltaText = `${delta > 0 ? '+' : ''}${delta}%`;
 
             return (
-              <div
-                key={insight.metric}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-wrap items-center gap-3">
-                  <div
-                    className="rounded-lg px-3 py-1 text-sm font-medium text-white"
-                    style={{ backgroundColor: meta?.color ?? "#6366F1" }}
-                  >
-                    {meta?.label ?? insight.metric}
+              <Card key={insight.metric} className="border-0 shadow-lg shadow-slate-200/50 bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-600">{meta?.label ?? insight.metric}</p>
+                      <p className="text-2xl font-bold text-slate-900">{deltaText}</p> 
+                      <p className={cn("text-sm",
+                        insight.trend === 'steigend' ? 'text-emerald-600' : 
+                        insight.trend === 'fallend' ? 'text-rose-600' : 'text-slate-500'
+                      )}>
+                        {trend.label}
+                      </p>
+                    </div>
+                    <div 
+                      className="w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center group-hover:scale-110 transition-transform" 
+                      style={{'--tw-gradient-from': meta?.color ?? '#60A5FA', '--tw-gradient-to': meta?.color ? `${meta.color}cc` : '#3B82F6'} as React.CSSProperties}
+                    >
+                      {trend.icon}
+                    </div>
                   </div>
-
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold",
-                      trend.badgeClass
-                    )}
-                  >
-                    {trend.icon}
-                    {trend.label}
-                  </span>
-
-                  <span className="text-sm font-semibold text-slate-700">
-                    {delta > 0 ? `+${delta}%` : `${delta}%`}
-                  </span>
-                </div>
-
-                <p className="mt-3 text-sm text-slate-600">
-                  {insight.recommendation}
-                </p>
-              </div>
+                  {insight.recommendation && (
+                    <p className="mt-4 text-sm text-slate-600 border-t border-slate-200/80 pt-4">{insight.recommendation}</p>
+                  )}
+                </CardContent>
+              </Card>
             );
           })}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   };
 
-  return <div className={cn("space-y-4", className)}>{renderContent()}</div>;
+  // return (
+  //   <div
+  //     className={cn("space-y-4", className)}
+  //     aria-live="polite"
+  //   >
+  //     {renderContent()}
+  //   </div>
+  // );
+
+  return renderContent();
 }
