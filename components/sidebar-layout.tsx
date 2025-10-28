@@ -3,31 +3,26 @@
 import { useState } from "react";
 import {
   User,
-  Heart,
   HeartPulse,
   Activity,
   Utensils,
   Menu,
-  X,
   Scale,
-  Thermometer,
   Bed,
 } from "lucide-react";
 import { NavLink } from "./nav-link";
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex flex-1 overflow-hidden relative">
-      {/* Sidebar */}
       <div
-        className={`${
-          sidebarOpen ? "w-58" : "w-0"
-        } transition-all duration-300 overflow-hidden flex-shrink-0`}
+        className={`fixed top-0 left-0 h-full z-20 w-60 bg-white/80 backdrop-blur-xl border-r border-slate-200/50 shadow-xl shadow-slate-200/20
+          transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="w-58 h-full bg-white/80 backdrop-blur-xl border-r border-slate-200/50 shadow-xl shadow-slate-200/20 flex flex-col">
-          {/* Logo + Title */}
+        <div className="w-full h-full flex flex-col">
           <div className="p-6 border-b border-slate-200/50">
             <NavLink href="/" className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
@@ -40,7 +35,6 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
             </NavLink>
           </div>
 
-          {/* Navigation */}
           <div className="flex-1 overflow-y-auto p-4">
             <nav className="space-y-2">
               <NavLink href="/user" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-green-50 hover:text-green-700 w-full">
@@ -63,6 +57,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
                 </div>
                 <span className="font-medium">Ernährung</span>
               </NavLink>
+
               <NavLink href="/vitalfunktionen" className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-red-50 hover:text-red-700 w-full">
                 <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 transition-colors group-hover:bg-red-200">
                   <HeartPulse className="h-5 w-5 text-red-600" />
@@ -86,17 +81,29 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
             </nav>
           </div>
 
-          {/* Footer */}
-          <div className="p-4 border-t border-slate-200/50">
-            <div className="text-center text-xs text-slate-400">
-              © 2025 Vital+ App
-            </div>
+          <div className="p-4 border-t border-slate-200/50 text-center text-xs text-slate-400">
+            © 2025 Vital+ App
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <main className="flex-1 overflow-auto bg-transparent">
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-black/10 backdrop-blur-sm z-10"
+        />
+      )}
+
+      <main className="flex-1 overflow-auto bg-transparent relative">
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="absolute top-4 left-4 p-2 rounded-lg hover:bg-slate-100 transition"
+          >
+            <Menu className="h-6 w-6 text-slate-600" />
+          </button>
+        )}
+
         <div className="min-h-full p-8 pt-8">{children}</div>
       </main>
     </div>
