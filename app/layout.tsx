@@ -1,19 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Geist as geistSans, Geist_Mono as geistMono } from "next/font/google";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import { SessionProvider } from "next-auth/react";
-import { auth } from "@/app/api/auth/[...nextauth]/route"; 
-
-const geistSansFont = geistSans({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMonoFont = geistMono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Vital+ App",
