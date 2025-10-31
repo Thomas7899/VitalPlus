@@ -1,15 +1,16 @@
-import NextAuth, { AuthOptions } from "next-auth" 
-import CredentialsProvider from "next-auth/providers/credentials"
+import NextAuth from "next-auth"
+import Credentials from "next-auth/providers/credentials"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import type { NextAuthConfig } from "next-auth"
 
-export const authOptions: AuthOptions = { 
+export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
   },
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -39,15 +40,9 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async redirect({ url, baseUrl }: { url?: string; baseUrl: string }) {
-      try {
-        const newUrl = new URL(url ?? "", baseUrl)
-        if (newUrl.origin === baseUrl) return newUrl.toString()
-      } catch {}
-      return baseUrl
-    },
     async session({ session, token }) {
       if (token.sub && session.user) {
+        
         session.user.id = token.sub
       }
       return session
@@ -61,5 +56,5 @@ export const authOptions: AuthOptions = {
   },
 }
 
-const handler = NextAuth(authOptions)
-export { handler as GET, handler as POST }
+export const { handlers, auth } = NextAuth(authConfig)
+export const { GET, POST } = handlers
