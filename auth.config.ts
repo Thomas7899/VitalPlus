@@ -1,92 +1,26 @@
-import type { NextAuthConfig } from 'next-auth';
-import CredentialsProvider from "next-auth/providers/credentials";
-import { z } from "zod";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+// auth.config.ts
+import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
   pages: {
-    signIn: '/login',
+    signIn: "/login",
   },
-  
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const creds = await z
-          .object({
-            email: z.string().email(),
-            password: z.string(),
-          })
-          .safeParseAsync(credentials);
-
-        if (!creds.success) return null;
-
-        const user = await prisma.user.findUnique({
-          where: { email: creds.data.email },
-        });
-
-        if (!user || !user.password) return null;
-
-        const isValid = await bcrypt.compare(creds.data.password, user.password);
-
-        return isValid ? user : null;
-      },
-    }),
-  ],
-
   callbacks: {
-    async redirect({ url, baseUrl }) {
-      const relativeUrl = url.startsWith(baseUrl) ? url.slice(baseUrl.length) : url;
-      
-      if (relativeUrl.startsWith("/dashboard")) {
-        return `${baseUrl}/`;
-      }
-      if (relativeUrl === "/") {
-        return `${baseUrl}/`;
-      }
-      if (relativeUrl.startsWith("/")) {
-        return `${baseUrl}${relativeUrl}`;
-      }
-      
-      return `${baseUrl}/`;
-    },
-
-    async session({ session, token }) {
-      if (token.sub && session.user) {
-        session.user.id = token.sub;
-      }
-      return session;
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        token.sub = user.id;
-      }
-      return token;
-    },
-
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const isProtectedRoute = nextUrl.pathname.startsWith('/kalorien');
-      const isAuthPage = nextUrl.pathname.startsWith('/login');
+      const isProtectedRoute = nextUrl.pathname.startsWith("/kalorien");
+      const isAuthPage = nextUrl.pathname.startsWith("/login");
 
-      if (isProtectedRoute) {
-        if (isLoggedIn) return true;
+      if (isProtectedRoute && !isLoggedIn) {
         return false;
-      } 
-      
-      if (isAuthPage) {
-        if (isLoggedIn) {
-          return Response.redirect(new URL('/', nextUrl));
-        }
-        return true;
       }
-      
+
+      if (isAuthPage && isLoggedIn) {
+        return Response.redirect(new URL("/", nextUrl));
+      }
+
       return true;
     },
   },
+  providers: [], 
 } satisfies NextAuthConfig;
