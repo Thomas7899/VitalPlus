@@ -9,8 +9,10 @@ import {
   Menu,
   Scale,
   Bed,
+  LogOut, 
 } from "lucide-react";
-import { NavLink } from "./nav-link";
+import { NavLink } from "./NavLink";
+import { signOut } from "next-auth/react";
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -78,6 +80,18 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
                 </div>
                 <span className="font-medium">Regeneration</span>
               </NavLink>
+              
+              <div className="pt-4 mt-4 border-t border-slate-200/50">
+                <button
+                  onClick={() => signOut()}
+                  className="group flex h-12 items-center rounded-xl px-4 text-slate-700 transition-colors hover:bg-red-50 hover:text-red-700 w-full cursor-pointer"
+                >
+                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 transition-colors group-hover:bg-red-200">
+                    <LogOut className="h-5 w-5 text-red-600" />
+                  </div>
+                  <span className="font-medium">Abmelden</span>
+                </button>
+              </div>
             </nav>
           </div>
 

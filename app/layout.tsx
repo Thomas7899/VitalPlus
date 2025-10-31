@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Geist as geistSans, Geist_Mono as geistMono } from "next/font/google";
-import SidebarLayout from "@/components/sidebar-layout";
+import SidebarLayout from "@/components/layout/SidebarLayout";
+import { SessionProvider } from "next-auth/react";
+import { auth } from "@/app/api/auth/[...nextauth]/route"; 
 
 const geistSansFont = geistSans({
   variable: "--font-geist-sans",
@@ -25,18 +27,17 @@ export const viewport = {
   themeColor: '#3B82F6',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" className="h-full">
       <body
-        className={`${geistSansFont.variable} ${geistMonoFont.variable} antialiased h-full flex flex-col bg-gradient-to-br from-slate-50 to-blue-50 text-slate-900 overflow-hidden`}
+        className="antialiased h-full flex flex-col bg-gradient-to-br from-slate-50 to-blue-50 text-slate-900 overflow-hidden"
       >
-        <SidebarLayout>{children}</SidebarLayout>
+        <SessionProvider>
+          <SidebarLayout>{children}</SidebarLayout>
+        </SessionProvider>
       </body>
     </html>
   );
 }
+
