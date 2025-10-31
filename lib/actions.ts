@@ -1,6 +1,6 @@
 'use server';
 
-import { signIn } from '@/app/api/auth/[...nextauth]/route';
+import { signIn } from '@/lib/auth';
 import { AuthError } from 'next-auth';
 import { redirect } from 'next/navigation';
 
