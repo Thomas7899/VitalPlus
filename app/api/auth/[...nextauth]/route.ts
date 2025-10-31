@@ -42,7 +42,6 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     async session({ session, token }) {
       if (token.sub && session.user) {
-        
         session.user.id = token.sub
       }
       return session
@@ -56,5 +55,5 @@ export const authConfig: NextAuthConfig = {
   },
 }
 
-export const { handlers, auth } = NextAuth(authConfig)
+const { handlers } = NextAuth(authConfig)
 export const { GET, POST } = handlers
