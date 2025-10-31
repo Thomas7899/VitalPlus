@@ -2,9 +2,13 @@
 
 **Vital+** ist eine moderne Webanwendung zur Erfassung, Visualisierung und Verwaltung von Gesundheits- und Vitaldaten. Sie richtet sich an Nutzer:innen, die ihre körperliche Gesundheit im Blick behalten und auf smarte Weise analysieren möchten.
 
+## Login ##
+john.doe@example.com
+password123
+
 ## ✨ Vorschau
 
-Hier ist ein kleiner Einblick, wie Vital+ auf einem mobilen Gerät aussieht (iPhone 15):
+Hier ein Einblick, wie Vital+ auf einem mobilen Gerät aussieht (iPhone 15):
 
 ![Vital+ auf dem iPhone 15](docs/screenshot-iphone-15.png)
 
