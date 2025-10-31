@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
@@ -26,6 +27,7 @@ const profileSchema = z.object({
   name: z.string().min(2, "Name muss mindestens 2 Zeichen haben."),
   email: z.string().email("Ungültige E-Mail-Adresse."),
   height: z.coerce.number().positive("Größe muss positiv sein.").optional(),
+  weight: z.coerce.number().positive("Gewicht muss positiv sein.").optional(),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
 });
@@ -33,9 +35,14 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function UserProfilePage() {
-  const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1"; // Feste User-ID
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id;
 
-  const { data: user, error, isLoading, mutate: mutateUser } = useSWR(`/api/users?id=${userId}`, fetcher);
+  const {
+    data: user,
+    error,
+    isLoading,
+  } = useSWR(userId ? `/api/users?id=${userId}` : null, fetcher);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -43,6 +50,7 @@ export default function UserProfilePage() {
       name: "",
       email: "",
       height: 0,
+      weight: 0,
       dateOfBirth: "",
       gender: "",
     },
@@ -54,6 +62,7 @@ export default function UserProfilePage() {
         name: user.name || "",
         email: user.email || "",
         height: user.height || 0,
+        weight: user.weight || 0,
         dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : "",
         gender: user.gender || "",
       });
@@ -73,14 +82,21 @@ export default function UserProfilePage() {
       }
 
       toast.success("Profil erfolgreich aktualisiert!");
-      mutateUser();
+      // Daten neu laden, um die UI zu aktualisieren
+      mutate(`/api/users?id=${userId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten.");
     }
   }
 
-  if (isLoading) return <div className="container mx-auto p-4 flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-  if (error) return <div className="container mx-auto p-4 text-red-500">Fehler beim Laden der Benutzerdaten.</div>;
+  if (status === "loading" || (status === "authenticated" && isLoading)) {
+    return <div className="container mx-auto p-4 flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
+  if (status === "unauthenticated") {
+    return <div className="container mx-auto p-4 text-center">Bitte melden Sie sich an, um Ihr Profil zu sehen.</div>;
+  }
+  if (error) return <div className="container mx-auto p-4 text-center text-red-500">Fehler beim Laden der Benutzerdaten.</div>;
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
@@ -161,6 +177,19 @@ export default function UserProfilePage() {
                     <FormLabel>Größe (in m)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="weight"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gewicht (in kg)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

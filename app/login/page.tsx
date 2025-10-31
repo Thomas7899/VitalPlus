@@ -1,5 +1,6 @@
 import LoginForm from '@/components/ui/login-form';
 import { Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
  
 export default function LoginPage() {
   return (
@@ -10,7 +11,7 @@ export default function LoginPage() {
 
           </div>
         </div>
-        <Suspense>
+        <Suspense fallback={<div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
           <LoginForm />
         </Suspense>
       </div>

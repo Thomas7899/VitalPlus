@@ -1,50 +1,60 @@
-export const dynamic = "force-dynamic";
-
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 
-export async function GET() {
-  const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true },
+const userUpdateSchema = z.object({
+  name: z.string().min(2, "Name muss mindestens 2 Zeichen haben.").optional(),
+  email: z.string().email("Ungültige E-Mail-Adresse.").optional(),
+  height: z.coerce.number().positive("Größe muss positiv sein.").optional().nullable(),
+  weight: z.coerce.number().positive("Gewicht muss positiv sein.").optional().nullable(),
+  dateOfBirth: z.string().optional().nullable(),
+  gender: z.string().optional().nullable(),
+});
+
+// GET-Handler zum Abrufen von Benutzerdaten
+export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (id !== session.user.id) {
+    return NextResponse.json({ error: "Zugriff verweigert" }, { status: 403 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id },
   });
 
-  return NextResponse.json(users);
+  if (!user) {
+    return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+  }
+
+  return NextResponse.json(user);
 }
 
-export async function POST(req: Request) {
-  const { name, email } = await req.json();
 
-  try {
-    const user = await prisma.user.create({
-      data: { name, email },
-    });
-    return NextResponse.json(user, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Fehler beim Erstellen" }, { status: 400 });
+export async function PUT(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
-}
 
-export async function PUT(req: Request) {
-  const { id, name, email } = await req.json();
+  const body = await request.json();
+  const parseResult = userUpdateSchema.safeParse(body);
 
-  try {
-    const updated = await prisma.user.update({
-      where: { id },
-      data: { name, email },
-    });
-    return NextResponse.json(updated);
-  } catch {
-    return NextResponse.json({ error: "Fehler beim Aktualisieren" }, { status: 400 });
+  if (!parseResult.success) {
+    return NextResponse.json({ error: "Ungültige Eingabedaten", details: parseResult.error.flatten() }, { status: 400 });
   }
-}
 
-export async function DELETE(req: Request) {
-  const { id } = await req.json();
+  const updatedUser = await prisma.user.update({
+    where: { id: session.user.id }, // Update basiert auf der Session-ID, nicht auf der ID aus dem Body
+    data: parseResult.data,
+  });
 
-  try {
-    await prisma.user.delete({ where: { id } });
-    return NextResponse.json({ message: "User gelöscht" });
-  } catch {
-    return NextResponse.json({ error: "Fehler beim Löschen" }, { status: 400 });
-  }
+  return NextResponse.json(updatedUser);
 }
