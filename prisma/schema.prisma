@@ -11,6 +11,7 @@ model User {
   id         String       @id @default(uuid())
   email      String       @unique
   name       String?
+  password   String?      // Hinzugefügt für die Passwort-Authentifizierung
   createdAt  DateTime     @default(now())
   dateOfBirth DateTime?
   gender     String?

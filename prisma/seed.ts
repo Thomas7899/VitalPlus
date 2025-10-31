@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 import path from 'path';
 
 // Lädt die Umgebungsvariablen explizit aus der .env.local-Datei,
@@ -19,6 +20,9 @@ async function main() {
   console.log('Alte Daten gelöscht.');
 
   console.log('Erstelle neuen Benutzer mit fester ID...');
+  // Erstelle einen Hash für das Passwort des Test-Nutzers
+  const hashedPassword = await bcrypt.hash('password123', 10);
+
   const user = await prisma.user.create({
     data: {
       id: '2fbb9c24-cdf8-49db-9b74-0762017445a1', // Feste ID für John Doe (aus dem Frontend)
@@ -27,6 +31,7 @@ async function main() {
       height: 1.75,
       gender: 'männlich',
       dateOfBirth: new Date('1990-01-01'),
+      password: hashedPassword, // Füge das gehashte Passwort hinzu
     },
   });
 
