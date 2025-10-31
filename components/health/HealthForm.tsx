@@ -26,8 +26,6 @@ import useSWR from "swr";
 
 const healthFormSchema = z.object({
     date: z.string().min(1, "Datum ist erforderlich"),
-    // Leere Strings zu undefined umwandeln und dann als Zahl parsen.
-    // Dies verbessert die Handhabung optionaler numerischer Felder.
     steps: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).int("Muss eine ganze Zahl sein").min(0).optional()),
     heartRate: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).int("Muss eine ganze Zahl sein").min(0).optional()),
     sleepHours: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).min(0).max(24).optional()),
