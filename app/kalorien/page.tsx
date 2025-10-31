@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSession } from "next-auth/react";
 import * as z from "zod";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, LogIn } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalorieChart } from "@/components/CalorieChart";
-import { CalorieTable } from "@/components/CalorieTable";
+import { CalorieChart } from "@/components/health/CalorieChart";
+import { CalorieTable } from "@/components/health/CalorieTable";
 import { cn } from "@/lib/utils";
 
 const MEAL_TYPES = [
@@ -42,11 +44,13 @@ type CalorieFormValues = z.infer<typeof calorieFormSchema>;
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function KalorienPage() {
-  const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1"; // Feste User-ID
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: healthData = [], error, isLoading } = useSWR(
-    `/api/health?userId=${userId}`,
+    // Daten erst abrufen, wenn die userId verfügbar ist
+    userId ? `/api/health?userId=${userId}` : null,
     fetcher
   );
 
@@ -64,6 +68,11 @@ export default function KalorienPage() {
 
   async function onSubmit(data: CalorieFormValues) {
     setIsSubmitting(true);
+    if (!userId) {
+      toast.error("Bitte melden Sie sich an, um Daten zu speichern.");
+      setIsSubmitting(false);
+      return;
+    }
     try {
       const response = await fetch("/api/health", {
         method: "POST",
@@ -80,7 +89,7 @@ export default function KalorienPage() {
       if (!response.ok) throw new Error("Fehler beim Speichern der Mahlzeit.");
 
       toast.success("Mahlzeit erfolgreich gespeichert!");
-      mutate(`/api/health?userId=${userId}`);
+      if (userId) mutate(`/api/health?userId=${userId}`);
       form.reset({
         ...form.getValues(),
         food: "",
@@ -209,7 +218,7 @@ export default function KalorienPage() {
                   )}
                 />
                 <div className="flex items-end">
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full" disabled={isSubmitting || !userId}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Eintrag speichern
                   </Button>
@@ -227,7 +236,7 @@ export default function KalorienPage() {
         <Card><CardContent className="text-center py-8 text-red-600">Fehler beim Laden der Daten.</CardContent></Card>
       )}
 
-      {!isLoading && calorieData.length > 0 && (
+      {!isLoading && userId && calorieData.length > 0 && (
         <Tabs defaultValue="chart" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="chart">Diagramm</TabsTrigger>
@@ -253,10 +262,25 @@ export default function KalorienPage() {
         </Tabs>
       )}
 
-      {!isLoading && calorieData.length === 0 && (
+      {!isLoading && userId && calorieData.length === 0 && (
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">Noch keine Kaloriendaten vorhanden. Erfassen Sie Ihre erste Mahlzeit!</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {status === "unauthenticated" && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <div className="flex flex-col items-center gap-4">
+              <LogIn className="h-12 w-12 text-slate-400" />
+              <h3 className="text-xl font-semibold">Bitte melden Sie sich an</h3>
+              <p className="text-muted-foreground">Um Ihre Kaloriendaten zu sehen und zu verwalten, müssen Sie angemeldet sein.</p>
+              <Button asChild>
+                <Link href="/login">Zum Login</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

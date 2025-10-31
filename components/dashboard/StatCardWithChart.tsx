@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Metric } from "@/components/metrics";
+import type { Metric } from "@/components/utils/metrics";
 import { cn } from "@/lib/utils";
 
 interface StatCardWithChartProps {

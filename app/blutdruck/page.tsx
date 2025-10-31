@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import useSWR, { mutate } from "swr";
@@ -18,10 +19,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { BloodPressureChart } from "@/components/BloodPressureChart";
-import { BloodPressureTable } from "@/components/BloodPressureTable";
+import { BloodPressureChart } from "@/components/health/BloodPressureChart";
+import { BloodPressureTable } from "@/components/health/BloodPressureTable";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
+import Link from "next/link";
 
 const PRESET_VALUES = {
   systolic: [90, 100, 110, 120, 130, 140, 150, 160, 170, 180],
@@ -39,20 +41,19 @@ const bloodPressureFormSchema = z.object({
 
 type BloodPressureFormValues = z.infer<typeof bloodPressureFormSchema>;
 
-// Helper-Funktion für SWR zum Fetchen von Daten
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) =>
+  fetch(url, { credentials: "include" }).then((res) => res.json());
 
 export default function BloodPressurePage() {
-  const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1"; // Feste User-ID
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Daten-Fetching mit SWR
   const { data: readings = [], error, isLoading } = useSWR(
-    `/api/health?userId=${userId}`,
+    userId ? `/api/health?userId=${userId}` : null,
     fetcher,
     {
-      // Nur Einträge mit Blutdruckwerten filtern
-      revalidateOnFocus: false, // Optional: verhindert Neuladen bei Fokus
+      revalidateOnFocus: false, 
     }
   );
 
@@ -71,7 +72,7 @@ export default function BloodPressurePage() {
 
   async function onSubmit(data: BloodPressureFormValues) {
     if (!userId) {
-      toast.error("Kein Nutzer ausgewählt.");
+      toast.error("Bitte melden Sie sich an, um Daten zu speichern.");
       return;
     }
     setIsSubmitting(true);
@@ -84,7 +85,7 @@ export default function BloodPressurePage() {
           date: `${data.date}T${data.time}:00`,
           bloodPressureSystolic: data.systolic,
           bloodPressureDiastolic: data.diastolic,
-          heartRate: data.pulse, // Puls als Herzfrequenz speichern
+          heartRate: data.pulse, 
           notes: data.notes,
         }),
       });
@@ -92,7 +93,6 @@ export default function BloodPressurePage() {
       if (!response.ok) throw new Error("Fehler beim Speichern der Messung.");
 
       toast.success("Messung erfolgreich gespeichert!");
-      // Lokale SWR-Daten neu validieren, um die UI zu aktualisieren
       mutate(`/api/health?userId=${userId}`);
       form.reset({
         ...form.getValues(),
@@ -107,8 +107,6 @@ export default function BloodPressurePage() {
   }
 
   const deleteReading = async (id: string) => {
-    // Löschfunktion muss noch implementiert werden (z.B. über eine DELETE API-Route)
-    // Vorerst nur eine Benachrichtigung
     toast.info("Löschfunktion noch nicht implementiert.");
   }
 
@@ -148,7 +146,6 @@ export default function BloodPressurePage() {
     <div className="container mx-auto p-4 max-w-6xl">
       <h1 className="text-3xl font-bold mb-6">Blutdruck Monitor</h1>
 
-      {/* Eingabeform */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Neue Messung erfassen</CardTitle>
@@ -281,51 +278,67 @@ export default function BloodPressurePage() {
         </CardContent>
       </Card>
 
-      {/* Datenvisualisierung */}
-      {isLoading && (
-        <Card><CardContent className="text-center py-8 flex justify-center items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> <p>Lade Messungen...</p></CardContent></Card>
-      )}
-      {!isLoading && error && (
-        <Card><CardContent className="text-center py-8 text-red-600">Fehler beim Laden der Daten.</CardContent></Card>
-      )}
-
-      {!isLoading && filteredReadings.length > 0 && (
-        <Tabs defaultValue="chart" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="chart">Diagramm</TabsTrigger>
-            <TabsTrigger value="table">Tabelle</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="chart">
-            <Card>
-              <CardHeader>
-                <CardTitle>Blutdruckverlauf</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BloodPressureChart data={filteredReadings} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="table">
-            <Card>
-              <CardHeader>
-                <CardTitle>Messwerte ({filteredReadings.length} Einträge)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BloodPressureTable data={filteredReadings} onDelete={deleteReading} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      )}
-
-      {!isLoading && filteredReadings.length === 0 && (
+      {(status === "loading" || isLoading) && (
         <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">Noch keine Messungen vorhanden. Erfassen Sie Ihre erste Messung!</p>
+          <CardContent className="text-center py-8 flex justify-center items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <p>Lade Messungen...</p>
           </CardContent>
         </Card>
+      )}
+
+      {status === "unauthenticated" && !isLoading && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <div className="flex flex-col items-center gap-4">
+              <LogIn className="h-12 w-12 text-slate-400" />
+              <h3 className="text-xl font-semibold">Bitte melden Sie sich an</h3>
+              <p className="text-muted-foreground">Um Ihre Blutdruckdaten zu sehen und zu verwalten, müssen Sie angemeldet sein.</p>
+              <Button asChild>
+                <Link href="/login">Zum Login</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {status === "authenticated" && !isLoading && (
+        <>
+          {error && (
+            <Card><CardContent className="text-center py-8 text-red-600">Fehler beim Laden der Daten.</CardContent></Card>
+          )}
+          {!error && filteredReadings.length > 0 && (
+            <Tabs defaultValue="chart" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="chart">Diagramm</TabsTrigger>
+                <TabsTrigger value="table">Tabelle</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="chart">
+                <Card>
+                  <CardHeader><CardTitle>Blutdruckverlauf</CardTitle></CardHeader>
+                  <CardContent><BloodPressureChart data={filteredReadings} /></CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="table">
+                <Card>
+                  <CardHeader><CardTitle>Messwerte ({filteredReadings.length} Einträge)</CardTitle></CardHeader>
+                  <CardContent><BloodPressureTable data={filteredReadings} onDelete={deleteReading} /></CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          )}
+          {!error && filteredReadings.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Noch keine Messungen vorhanden. Erfassen Sie Ihre erste Messung!
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

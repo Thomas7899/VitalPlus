@@ -8,14 +8,16 @@ import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 
-import { StatCardWithChart } from "@/components/StatCardWithChart";
-import { HealthDataTable } from "@/components/HealthDataTable";
-import { metrics } from "@/components/metrics";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
+import { HealthDataTable } from "@/components/health/HealthDataTable";
+import { metrics } from "@/components/utils/metrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const COMPOSITION_METRICS = metrics.filter(m => ["weight", "bmi", "muscleMass", "bodyFat"].includes(m.key));
@@ -27,7 +29,7 @@ const formSchema = z.object({
   bodyFat: z.preprocess((val) => (val === "" ? undefined : val), z.coerce.number({ invalid_type_error: "Muss eine Zahl sein" }).optional()),
 });
 
-const HealthChart = dynamic(() => import('@/components/HealthChart').then(mod => mod.HealthChart), {
+const HealthChart = dynamic(() => import('@/components/health/HealthChart').then(mod => mod.HealthChart), {
   ssr: false,
   loading: () => <div className="h-80 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
 });
@@ -37,11 +39,12 @@ type FormValues = z.infer<typeof formSchema>;
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function KoerperzusammensetzungPage() {
-  const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1"; // Feste User-ID
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: healthData = [], isLoading } = useSWR(
-    `/api/health?userId=${userId}`,
+  const { data: healthData = [], error, isLoading } = useSWR(
+    userId ? `/api/health?userId=${userId}` : null,
     fetcher
   );
 
@@ -58,7 +61,11 @@ export default function KoerperzusammensetzungPage() {
   );
 
   async function onSubmit(data: FormValues) {
-    if (!userId) return toast.error("Kein Nutzer ausgewählt.");
+    if (!userId) {
+      toast.error("Bitte melden Sie sich an, um Daten zu speichern.");
+      return;
+    }
+
     if (Object.values(data).every(v => v === undefined)) {
       return toast.error("Bitte geben Sie mindestens einen Wert ein.");
     }
@@ -72,7 +79,7 @@ export default function KoerperzusammensetzungPage() {
       });
       if (!response.ok) throw new Error("Fehler beim Speichern.");
       toast.success("Daten gespeichert!");
-      mutate(`/api/health?userId=${userId}`);
+      if (userId) mutate(`/api/health?userId=${userId}`);
       form.reset();
     } catch (error) {
       toast.error("Speichern fehlgeschlagen.");
@@ -138,7 +145,7 @@ export default function KoerperzusammensetzungPage() {
                   )}
                 />
               </div>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !userId}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Speichern
               </Button>
@@ -148,15 +155,16 @@ export default function KoerperzusammensetzungPage() {
       </Card>
 
       {isLoading && (
-        <div className="flex justify-center items-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-          <p className="ml-2">Lade Diagramme...</p>
-        </div>
+        <Card><CardContent className="text-center py-8 flex justify-center items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> <p>Lade Körperdaten...</p></CardContent></Card>
       )}
 
-      {!isLoading && (
-        <Tabs defaultValue="chart">
-          <TabsList>
+      {!isLoading && error && (
+        <Card><CardContent className="text-center py-8 text-red-600">Fehler beim Laden der Daten.</CardContent></Card>
+      )}
+
+      {!isLoading && userId && filteredData.length > 0 && (
+        <Tabs defaultValue="chart" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="chart">Diagramme</TabsTrigger>
             <TabsTrigger value="table">Tabelle</TabsTrigger>
           </TabsList>
@@ -176,6 +184,29 @@ export default function KoerperzusammensetzungPage() {
             </Card>
           </TabsContent>
         </Tabs>
+      )}
+
+      {!isLoading && userId && filteredData.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground">Noch keine Körperdaten vorhanden. Erfassen Sie Ihre erste Messung!</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {status === "unauthenticated" && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <div className="flex flex-col items-center gap-4">
+              <LogIn className="h-12 w-12 text-slate-400" />
+              <h3 className="text-xl font-semibold">Bitte melden Sie sich an</h3>
+              <p className="text-muted-foreground">Um Ihre Körperdaten zu sehen und zu verwalten, müssen Sie angemeldet sein.</p>
+              <Button asChild>
+                <Link href="/login">Zum Login</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

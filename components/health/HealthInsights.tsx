@@ -3,7 +3,7 @@
 import type { JSX } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { metrics } from "@/components/metrics";
+import { metrics } from "@/components/utils/metrics";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,

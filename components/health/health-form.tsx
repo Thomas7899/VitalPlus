@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import useSWR from "swr";
 
 const healthFormSchema = z.object({
     date: z.string().min(1, "Datum ist erforderlich"),
@@ -51,16 +52,28 @@ type HealthFormValues = z.infer<typeof healthFormSchema>;
 
 interface HealthFormProps {
   userId: string;
+  // Optional: User-Objekt, um das Formular vorab auszufüllen
+  user?: {
+    height?: number | null;
+    weight?: number | null;
+    bloodGroup?: string | null;
+  };
   onSuccess?: () => void;
 }
 
 export function HealthForm({ userId, onSuccess }: HealthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Daten des Nutzers abrufen, um das Formular vorab auszufüllen
+  const { data: user } = useSWR(userId ? `/api/users?id=${userId}` : null, (url) => fetch(url).then(res => res.json()));
 
   const form = useForm<HealthFormValues>({
     resolver: zodResolver(healthFormSchema),
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
+      // Standardwerte, die später überschrieben werden
+      height: undefined,
+      weight: undefined,
+      bloodGroup: "",
     },
   });
 
@@ -91,6 +104,18 @@ export function HealthForm({ userId, onSuccess }: HealthFormProps) {
       setIsSubmitting(false);
     }
   }
+
+  // Effekt, um das Formular mit den Daten des Nutzers zu aktualisieren, sobald sie geladen sind
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        ...form.getValues(), // Behält bereits eingegebene Werte bei
+        height: user.height || undefined,
+        weight: user.weight || undefined, // Annahme: Das User-Modell hat auch ein 'weight'-Feld
+        bloodGroup: user.bloodGroup || "",
+      });
+    }
+  }, [user, form]);
 
   return (
     <Card>

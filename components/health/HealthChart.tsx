@@ -11,7 +11,7 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-import type { Metric } from "@/components/metrics";
+import type { Metric } from "@/components/utils/metrics";
 
 type Props = {
   data: any[];

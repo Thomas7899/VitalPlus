@@ -7,9 +7,9 @@ import * as z from "zod";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 
-import { HealthDataTable } from "@/components/HealthDataTable";
-import { StatCardWithChart } from "@/components/StatCardWithChart";
-import { metrics } from "@/components/metrics";
+import { HealthDataTable } from "@/components/health/HealthDataTable";
+import { StatCardWithChart } from "@/components/dashboard/StatCardWithChart";
+import { metrics } from "@/components/utils/metrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import dynamic from "next/dynamic";
 
 const REGENERATION_METRICS = metrics.filter(m => m.category === "Regeneration");
 
-const HealthChart = dynamic(() => import('@/components/HealthChart').then(mod => mod.HealthChart), {
+const HealthChart = dynamic(() => import('@/components/health/HealthChart').then(mod => mod.HealthChart), {
   ssr: false,
   loading: () => <div className="h-80 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
 });
