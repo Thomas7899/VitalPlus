@@ -1,17 +1,16 @@
 // components/dashboard/DashboardStats.tsx
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, Heart, Footprints, Flame } from "lucide-react"; 
-import type { DashboardStatsData } from "@/lib/data"; 
+import { TrendingUp, Heart, Footprints, Flame } from "lucide-react";
+import type { DashboardStatsData } from "@/lib/data";
 
 const statsConfig = [
-  { id: 'steps', title: "Heutige Schritte", color: "blue", icon: Footprints },
-  { id: 'calories', title: "Kalorienverbrauch", color: "orange", icon: Flame },
-  { id: 'heartRate', title: "Herzfrequenz", color: "red", icon: Heart },
-  { id: 'sleep', title: "Schlafqualität", color: "purple", icon: TrendingUp }, 
+  { id: "steps", title: "Heutige Schritte", color: "blue", icon: Footprints },
+  { id: "calories", title: "Kalorienverbrauch", color: "orange", icon: Flame },
+  { id: "heartRate", title: "Herzfrequenz", color: "red", icon: Heart },
+  { id: "sleep", title: "Schlafqualität", color: "purple", icon: TrendingUp },
 ];
 
 export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
-  
   const displayStats = [
     { ...statsConfig[0], value: stats.steps, change: stats.stepsChange },
     { ...statsConfig[1], value: stats.calories, change: stats.caloriesChange },
@@ -24,7 +23,20 @@ export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
       {displayStats.map((stat) => (
         <Card
           key={stat.id}
-          className="border-0 shadow-lg shadow-slate-200/50 bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all duration-300"
+          className={`
+            border-0 shadow-lg shadow-slate-200/50
+            hover:shadow-xl hover:scale-105 transition-all duration-300
+            backdrop-blur-sm 
+            ${
+              stat.color === "blue"
+                ? "bg-gradient-to-br from-blue-50 to-blue-100/70 hover:from-blue-100 hover:to-blue-200"
+                : stat.color === "orange"
+                ? "bg-gradient-to-br from-orange-50 to-orange-100/70 hover:from-orange-100 hover:to-orange-200"
+                : stat.color === "red"
+                ? "bg-gradient-to-br from-red-50 to-red-100/70 hover:from-red-100 hover:to-red-200"
+                : "bg-gradient-to-br from-purple-50 to-purple-100/70 hover:from-purple-100 hover:to-purple-200"
+            }
+          `}
         >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -44,7 +56,7 @@ export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
                 </p>
               </div>
               <div
-                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${
+                className={`w-12 h-12 rounded-xl bg-linear-to-br ${
                   stat.color === "blue"
                     ? "from-blue-400 to-blue-600"
                     : stat.color === "orange"

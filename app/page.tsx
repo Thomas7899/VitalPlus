@@ -57,9 +57,11 @@ export default async function DashboardPage() {
         <StatsData userId={userId} />
       </Suspense>
       <DashboardQuickActions />
-      <Suspense>
-        <TrendsData userId={userId} />
-      </Suspense>
+     {/* 
+<Suspense>
+  <TrendsData userId={userId} />
+</Suspense> 
+*/}
       <Suspense>
         <ActivitiesData userId={userId} />
       </Suspense>

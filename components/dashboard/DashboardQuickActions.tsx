@@ -33,7 +33,20 @@ export function DashboardQuickActions() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {quickActions.map((action, index) => (
           <Link key={index} href={action.href}>
-            <Card className="border-0 shadow-lg shadow-slate-200/50 bg-white/70 backdrop-blur-sm hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer group">
+            <Card
+              className={`
+                border-0 shadow-lg shadow-slate-200/50 
+                hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer group
+                backdrop-blur-sm 
+                ${
+                  action.color === "purple"
+                    ? "bg-gradient-to-br from-purple-50 to-purple-100/70 hover:from-purple-100 hover:to-purple-200"
+                    : action.color === "orange"
+                    ? "bg-gradient-to-br from-orange-50 to-orange-100/70 hover:from-orange-100 hover:to-orange-200"
+                    : "bg-gradient-to-br from-red-50 to-red-100/70 hover:from-red-100 hover:to-red-200"
+                }
+              `}
+            >
               <CardHeader className="pb-3">
                 <div
                   className={`w-14 h-14 rounded-xl bg-gradient-to-br ${

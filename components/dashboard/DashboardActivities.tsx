@@ -1,10 +1,8 @@
 // components/dashboard/DashboardActivities.tsx
-
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Calendar, Activity, Utensils, Heart } from "lucide-react"; // Heart importieren
-import type { DashboardActivityData } from "@/lib/data"; // Typ importieren
+import { Calendar, Activity, Utensils, Heart } from "lucide-react"; 
+import type { DashboardActivityData } from "@/lib/data"; 
 
-// Icon-Mapping für verschiedene Aktivitätstypen
 const activityIcons = {
   BLOOD_PRESSURE: { icon: Heart, bg: 'bg-purple-50', iconBg: 'bg-purple-100', text: 'text-purple-600' },
   MEAL: { icon: Utensils, bg: 'bg-orange-50', iconBg: 'bg-orange-100', text: 'text-orange-600' },
