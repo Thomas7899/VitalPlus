@@ -1,19 +1,29 @@
+// components/dashboard/DashboardStats.tsx
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Heart, Footprints, Flame } from "lucide-react"; 
+import type { DashboardStatsData } from "@/lib/data"; 
 
-const quickStats = [
-  { title: "Heutige Schritte", value: "8,247", change: "+12%", color: "blue" },
-  { title: "Kalorienverbrauch", value: "2,150", change: "+5%", color: "orange" },
-  { title: "Herzfrequenz", value: "72 bpm", change: "Normal", color: "red" },
-  { title: "Schlafqualität", value: "7.5h", change: "+0.5h", color: "purple" },
+const statsConfig = [
+  { id: 'steps', title: "Heutige Schritte", color: "blue", icon: Footprints },
+  { id: 'calories', title: "Kalorienverbrauch", color: "orange", icon: Flame },
+  { id: 'heartRate', title: "Herzfrequenz", color: "red", icon: Heart },
+  { id: 'sleep', title: "Schlafqualität", color: "purple", icon: TrendingUp }, 
 ];
 
-export function DashboardStats() {
+export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
+  
+  const displayStats = [
+    { ...statsConfig[0], value: stats.steps, change: stats.stepsChange },
+    { ...statsConfig[1], value: stats.calories, change: stats.caloriesChange },
+    { ...statsConfig[2], value: stats.heartRate, change: stats.heartRateChange },
+    { ...statsConfig[3], value: stats.sleep, change: stats.sleepChange },
+  ];
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {quickStats.map((stat, index) => (
+      {displayStats.map((stat) => (
         <Card
-          key={index}
+          key={stat.id}
           className="border-0 shadow-lg shadow-slate-200/50 bg-white/70 backdrop-blur-sm hover:shadow-xl transition-all duration-300"
         >
           <CardContent className="p-6">
@@ -44,7 +54,7 @@ export function DashboardStats() {
                     : "from-purple-400 to-purple-600"
                 } flex items-center justify-center`}
               >
-                <TrendingUp className="h-6 w-6 text-white" />
+                <stat.icon className="h-6 w-6 text-white" />
               </div>
             </div>
           </CardContent>
