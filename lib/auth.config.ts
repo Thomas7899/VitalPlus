@@ -1,55 +1,52 @@
-import Credentials from "next-auth/providers/credentials"
-import type { NextAuthConfig } from "next-auth"
-import { z } from "zod"
-import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/prisma"
+import Credentials from "next-auth/providers/credentials";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import type { NextAuthConfig } from "next-auth";
+import { db } from "@/db/client";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export const authConfig: NextAuthConfig = {
+  adapter: DrizzleAdapter(db),
   pages: {
     signIn: "/login",
   },
+  session: { strategy: "jwt" },
   providers: [
     Credentials({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: "E-Mail", type: "text" },
+        password: { label: "Passwort", type: "password" },
       },
       async authorize(credentials) {
-        const creds = await z
-          .object({
-            email: z.string().email(),
-            password: z.string(),
-          })
-          .safeParseAsync(credentials)
+        if (!credentials?.email || !credentials.password) return null;
 
-        if (!creds.success) return null
+        const email = credentials.email as string;
+        const password = credentials.password as string;
 
-        const user = await prisma.user.findUnique({
-          where: { email: creds.data.email },
-        })
+        const user = await db.query.users.findFirst({
+          where: eq(users.email, email),
+        });
+        if (!user) return null;
 
-        if (!user || !user.password) return null
-
-        const isValid = await bcrypt.compare(creds.data.password, user.password)
-        if (!isValid) return null
-
-        return user
+        const isValid = await bcrypt.compare(password, user.password ?? "");
+        return isValid ? user : null;
       },
     }),
   ],
   callbacks: {
     async session({ session, token }) {
       if (token.sub && session.user) {
-        session.user.id = token.sub
+        session.user.id = token.sub;
       }
-      return session
+      return session;
     },
     async jwt({ token, user }) {
       if (user) {
-        token.sub = user.id
+        token.sub = user.id;
       }
-      return token
+      return token;
     },
   },
-}
+};
