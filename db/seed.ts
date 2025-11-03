@@ -1,0 +1,98 @@
+import "dotenv/config";
+import bcrypt from "bcryptjs";
+import { db } from "./client";
+import { users, healthData } from "./schema";
+import { sql } from "drizzle-orm";
+
+async function main() {
+  console.log("Lösche alte Daten...");
+  await db.execute(sql`TRUNCATE TABLE "HealthData" RESTART IDENTITY CASCADE;`);
+  await db.execute(sql`TRUNCATE TABLE "User" RESTART IDENTITY CASCADE;`);
+
+  console.log("Erstelle neuen Benutzer...");
+  const hashedPassword = await bcrypt.hash("password123", 10);
+
+  const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1";
+
+  await db.insert(users).values({
+    id: userId,
+    email: "john.doe@example.com",
+    name: "John Doe",
+    height: 1.75,
+    gender: "männlich",
+    dateOfBirth: new Date("1990-01-01"),
+    password: hashedPassword,
+  });
+
+  const year = 2025;
+  const startDate = new Date(year, 0, 1);
+  const endDate = new Date(year, 11, 31);
+  const healthDataArray: any[] = [];
+
+  console.log(`Generiere Gesundheitsdaten für das Jahr ${year}...`);
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const [systolic, diastolic] = getRandomBloodPressure();
+
+    const breakfastTime = new Date(d);
+    breakfastTime.setHours(getRandomInt(7, 9), getRandomInt(0, 59));
+    healthDataArray.push({
+      userId,
+      date: breakfastTime,
+      steps: getRandomInt(7000, 15000),
+      heartRate: getRandomInt(60, 85),
+      sleepHours: parseFloat((Math.random() * 3 + 5).toFixed(1)),
+      weight: parseFloat((getInitialWeight("männlich") + Math.random() * 2 - 1).toFixed(1)),
+      calories: getRandomInt(400, 700),
+      mealType: "Frühstück",
+      respiratoryRate: getRandomInt(12, 20),
+      bloodPressureSystolic: systolic,
+      bloodPressureDiastolic: diastolic,
+      bmi: parseFloat((getInitialWeight("männlich") / Math.pow(1.75, 2)).toFixed(1)),
+      bodyTemp: parseFloat((36.5 + Math.random() * 1).toFixed(1)),
+      oxygenSaturation: parseFloat((Math.random() * 5 + 95).toFixed(1)),
+      stairSteps: getRandomInt(0, 100),
+      elevation: getRandomInt(0, 200),
+      muscleMass: parseFloat((Math.random() * 2 + 30).toFixed(1)),
+      bodyFat: parseFloat((Math.random() * 15 + 20).toFixed(1)),
+    });
+
+    // Mahlzeiten
+    const lunchTime = new Date(d);
+    lunchTime.setHours(getRandomInt(12, 14), getRandomInt(0, 59));
+    healthDataArray.push({ userId, date: lunchTime, calories: getRandomInt(500, 900), mealType: "Mittagessen" });
+
+    const dinnerTime = new Date(d);
+    dinnerTime.setHours(getRandomInt(18, 20), getRandomInt(0, 59));
+    healthDataArray.push({ userId, date: dinnerTime, calories: getRandomInt(500, 800), mealType: "Abendessen" });
+
+    if (Math.random() > 0.5) {
+      const snackTime = new Date(d);
+      snackTime.setHours(getRandomInt(15, 16), getRandomInt(0, 59));
+      healthDataArray.push({ userId, date: snackTime, calories: getRandomInt(100, 300), mealType: "Snacks" });
+    }
+  }
+
+  await db.insert(healthData).values(healthDataArray);
+  console.log("Seed-Daten erfolgreich erstellt.");
+}
+
+function getInitialWeight(gender: string | null): number {
+  if (gender === "männlich") return 75;
+  if (gender === "weiblich") return 65;
+  return 70;
+}
+
+function getRandomBloodPressure(): [number, number] {
+  const chance = Math.random();
+  if (chance < 0.7) return [getRandomInt(110, 125), getRandomInt(70, 80)];
+  if (chance < 0.9) return [getRandomInt(130, 145), getRandomInt(85, 95)];
+  return [getRandomInt(145, 160), getRandomInt(95, 105)];
+}
+
+function getRandomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+main()
+  .catch((e) => console.error(e))
+  .finally(() => process.exit(0));
