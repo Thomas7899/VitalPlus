@@ -7,6 +7,7 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardQuickActions } from "@/components/dashboard/DashboardQuickActions";
 import { DashboardTrends } from "@/components/dashboard/DashboardTrends";
 import { DashboardActivities } from "@/components/dashboard/DashboardActivities";
+import { HealthInsights } from "@/components/dashboard/HealthInsights";
 
 import { 
   getDashboardStats, 
@@ -56,6 +57,7 @@ export default async function DashboardPage() {
       <Suspense>
         <StatsData userId={userId} />
       </Suspense>
+      <HealthInsights userId={userId} />
       <DashboardQuickActions />
      {/* 
 <Suspense>
