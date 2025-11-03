@@ -12,6 +12,8 @@
     "seed": "pnpm tsx db/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.62",
+    "@ai-sdk/react": "^2.0.87",
     "@auth/drizzle-adapter": "^0.5.1",
     "@capacitor/core": "^7.4.4",
     "@capacitor/ios": "^7.4.4",
@@ -27,6 +29,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@types/bcrypt": "^5.0.2",
     "@vercel/postgres": "^0.10.0",
+    "ai": "^5.0.87",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
@@ -43,6 +46,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.65.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^2.15.4",
     "sonner": "^2.0.7",
     "swr": "^2.3.6",
