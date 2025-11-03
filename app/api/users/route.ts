@@ -1,8 +1,11 @@
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db/client";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+// 🧩 Zod-Schema zur Validierung
 const userUpdateSchema = z.object({
   name: z.string().min(2, "Name muss mindestens 2 Zeichen haben.").optional(),
   email: z.string().email("Ungültige E-Mail-Adresse.").optional(),
@@ -12,7 +15,7 @@ const userUpdateSchema = z.object({
   gender: z.string().optional().nullable(),
 });
 
-// GET-Handler zum Abrufen von Benutzerdaten
+// 🔹 GET – Benutzerinformationen abrufen
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -26,9 +29,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Zugriff verweigert" }, { status: 403 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-  });
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, id!))
+    .limit(1);
 
   if (!user) {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
@@ -37,7 +42,7 @@ export async function GET(request: Request) {
   return NextResponse.json(user);
 }
 
-
+// 🔹 PUT – Benutzer aktualisieren
 export async function PUT(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -48,13 +53,27 @@ export async function PUT(request: Request) {
   const parseResult = userUpdateSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return NextResponse.json({ error: "Ungültige Eingabedaten", details: parseResult.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: "Ungültige Eingabedaten", details: parseResult.error.flatten() },
+      { status: 400 }
+    );
   }
 
-  const updatedUser = await prisma.user.update({
-    where: { id: session.user.id }, // Update basiert auf der Session-ID, nicht auf der ID aus dem Body
-    data: parseResult.data,
-  });
+  const data = parseResult.data;
+
+  // ✅ Typensichere Konvertierung
+  const updateValues = {
+    ...data,
+    dateOfBirth: data.dateOfBirth
+      ? new Date(data.dateOfBirth)
+      : null,
+  };
+
+  const [updatedUser] = await db
+    .update(users)
+    .set(updateValues)
+    .where(eq(users.id, session.user.id))
+    .returning();
 
   return NextResponse.json(updatedUser);
 }
