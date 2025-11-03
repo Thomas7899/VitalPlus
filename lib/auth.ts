@@ -1,10 +1,9 @@
-// lib/auth.ts
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db/client";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -19,14 +18,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const creds = await z
           .object({
             email: z.string().email(),
-            password: z.string(),
+            password: z.string().min(1),
           })
           .safeParseAsync(credentials);
 
         if (!creds.success) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: creds.data.email },
+        // ✅ Clean Drizzle query
+        const user = await db.query.users.findFirst({
+          where: (user, { eq }) => eq(user.email, creds.data.email),
         });
 
         if (!user || !user.password) return null;
