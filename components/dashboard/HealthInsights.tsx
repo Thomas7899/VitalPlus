@@ -6,17 +6,24 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Brain, Dumbbell, Salad, Moon } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
+import { cn } from "@/lib/utils";
+
+type SectionType = "summary" | "warning" | "nutrition" | "training" | "sleep" | "info";
 
 type Section = {
   title: string;
   content: string;
+  type: SectionType;
   icon?: React.ReactNode;
-  type?: "summary" | "warning" | "info";
+  className?: string;
 };
 
 export function HealthInsights({ userId }: { userId: string }) {
   const [sections, setSections] = useState<Section[]>([]);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,43 +42,57 @@ export function HealthInsights({ userId }: { userId: string }) {
         });
 
         const data = await res.json();
-        if (!res.ok || !data.text) throw new Error(data.error);
-
-        const text = data.text as string;
-        const parsed: Section[] = [];
-        const parts = text.split(/##\s+/g).slice(1);
-
-        for (const part of parts) {
-          const [titleLine, ...rest] = part.split("\n");
-          const title = titleLine.trim();
-          const content = rest.join("\n").trim();
-
-          let type: Section["type"] = "info";
-          let icon: React.ReactNode | undefined;
-
-          if (title.toLowerCase().includes("zusammenfassung")) {
-            type = "summary";
-            icon = <Brain className="text-blue-500" />;
-          } else if (title.toLowerCase().includes("warnung")) {
-            type = "warning";
-            icon = <AlertTriangle className="text-yellow-500" />;
-          } else if (title.toLowerCase().includes("training")) {
-            icon = <Dumbbell className="text-red-500" />;
-          } else if (title.toLowerCase().includes("ernährung")) {
-            icon = <Salad className="text-green-500" />;
-          } else if (title.toLowerCase().includes("schlaf")) {
-            icon = <Moon className="text-indigo-500" />;
-          }
-
-          parsed.push({ title, content, icon, type });
+        if (!res.ok || !data.sections) {
+          throw new Error(data.error || "Antwort der API war ungültig");
         }
 
+        const apiSections = data.sections as Section[];
+
+        const parsed: Section[] = apiSections.map((s) => {
+          let icon: React.ReactNode | undefined;
+          let className: string = "border-l-gray-400";
+
+          switch (s.type) {
+            case "summary":
+              icon = <Brain className="text-blue-500" />;
+              className = "border-l-blue-500";
+              break;
+            case "warning":
+              icon = <AlertTriangle className="text-yellow-500" />;
+              className = "border-l-yellow-500 bg-yellow-50/40 dark:bg-yellow-950/30";
+              break;
+            case "training":
+              icon = <Dumbbell className="text-red-500" />;
+              className = "border-l-red-500 bg-red-50/40 dark:bg-red-950/30";
+              break;
+            case "nutrition":
+              icon = <Salad className="text-green-500" />;
+              className = "border-l-green-500 bg-green-50/40 dark:bg-green-950/30";
+              break;
+            case "sleep":
+              icon = <Moon className="text-indigo-500" />;
+              className = "border-l-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/30";
+              break;
+            default:
+              className = "border-l-gray-400";
+          }
+
+          return { ...s, icon, className };
+        });
+
         setSections(parsed);
-      } catch {
+      } catch (error) {
+        const errorMsg =
+          error instanceof Error
+            ? error.message
+            : "Gesundheitsanalyse konnte nicht geladen werden.";
         setSections([
           {
             title: "Fehler",
-            content: "❌ Gesundheitsanalyse konnte nicht geladen werden.",
+            content: `❌ ${errorMsg}`,
+            type: "warning",
+            icon: <AlertTriangle className="text-yellow-500" />,
+            className: "border-l-yellow-500 bg-yellow-50/40 dark:bg-yellow-950/30",
           },
         ]);
       } finally {
@@ -88,6 +109,11 @@ export function HealthInsights({ userId }: { userId: string }) {
     (s) => s.type !== "summary" && s.type !== "warning"
   );
 
+  const markdownPlugins = {
+    remarkPlugins: [remarkMath],
+    rehypePlugins: [rehypeKatex],
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold flex items-center gap-2">
@@ -103,13 +129,15 @@ export function HealthInsights({ userId }: { userId: string }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <Card className="border-l-4 border-l-blue-500">
+              <Card className={cn("border-l-4", summary.className)}>
                 <CardHeader className="flex flex-row items-center gap-2">
                   {summary.icon}
                   <CardTitle>{summary.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm text-muted-foreground leading-relaxed">
-                  <ReactMarkdown>{summary.content}</ReactMarkdown>
+                <CardContent className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
+                  <ReactMarkdown {...markdownPlugins}>
+                    {summary.content}
+                  </ReactMarkdown>
                 </CardContent>
               </Card>
             </motion.div>
@@ -125,9 +153,11 @@ export function HealthInsights({ userId }: { userId: string }) {
                   <AlertTriangle className="text-yellow-500" />
                   <CardTitle>Wichtige Hinweise</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm text-muted-foreground leading-relaxed">
+                <CardContent className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
                   {warnings.map((w, i) => (
-                    <ReactMarkdown key={i}>{w.content}</ReactMarkdown>
+                    <ReactMarkdown key={i} {...markdownPlugins}>
+                      {w.content}
+                    </ReactMarkdown>
                   ))}
                 </CardContent>
               </Card>
@@ -146,14 +176,19 @@ export function HealthInsights({ userId }: { userId: string }) {
                 {rest.map((s, i) => (
                   <Card
                     key={i}
-                    className="hover:shadow-md transition-shadow duration-200"
+                    className={cn(
+                      "border-l-4 hover:shadow-lg transition-shadow duration-200",
+                      s.className
+                    )}
                   >
                     <CardHeader className="flex flex-row items-center gap-2">
                       {s.icon}
                       <CardTitle className="text-base">{s.title}</CardTitle>
                     </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground leading-relaxed">
-                      <ReactMarkdown>{s.content}</ReactMarkdown>
+                    <CardContent className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
+                      <ReactMarkdown {...markdownPlugins}>
+                        {s.content}
+                      </ReactMarkdown>
                     </CardContent>
                   </Card>
                 ))}
@@ -169,7 +204,7 @@ export function HealthInsights({ userId }: { userId: string }) {
             >
               {expanded
                 ? "Details ausblenden"
-                : "Weitere Empfehlungen anzeigen"}
+                : "Details und Empfehlungen anzeigen"}
             </Button>
           </div>
         </>

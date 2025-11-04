@@ -62,11 +62,21 @@ export async function POST(req: Request) {
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content:
-            "Du bist ein digitaler Gesundheitscoach. Analysiere Gesundheitsdaten und gib Empfehlungen, Warnungen und einfache Ernährungs- oder Trainingspläne. Formatiere deine Antwort in Markdown mit Überschriften, Listen und Emojis.",
+          content: `
+            Du bist ein digitaler Gesundheitscoach. Analysiere die Gesundheitsdaten.
+            Gib deine Antwort IMMER als valides JSON-Objekt zurück.
+            Das Objekt soll einen Schlüssel "sections" haben, der ein Array ist.
+            Jedes Objekt im Array soll diesem Schema folgen:
+            { 
+              "title": string, 
+              "content": string (Markdown-formatiert), 
+              "type": "summary" | "warning" | "nutrition" | "training" | "sleep" | "info" 
+            }
+          `,
         },
         {
           role: "user",
@@ -77,8 +87,18 @@ export async function POST(req: Request) {
       ],
     });
 
-    const text = completion.choices[0]?.message?.content || "Keine Antwort";
-    return NextResponse.json({ text });
+    const content = completion.choices[0]?.message?.content;
+
+    if (!content) {
+      return NextResponse.json(
+        { error: "Keine Antwort von KI" },
+        { status: 500 }
+      );
+    }
+
+    const parsedJson = JSON.parse(content);
+    return NextResponse.json(parsedJson);
+
   } catch (error) {
     console.error("💥 Coach-Fehler:", error);
     return NextResponse.json(
