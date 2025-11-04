@@ -1,5 +1,3 @@
-// app/api/health/coach/route.ts
-
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { db } from "@/db/client";
@@ -68,7 +66,7 @@ export async function POST(req: Request) {
         {
           role: "system",
           content:
-            "Du bist ein digitaler Gesundheitscoach. Analysiere Gesundheitsdaten und gib Empfehlungen, Warnungen und einfache Ernährungs- oder Trainingspläne. Formatiere deine Antwort in Markdown: 1. **Zusammenfassung** 2. **Warnungen** 3. **Empfehlungen**",
+            "Du bist ein digitaler Gesundheitscoach. Analysiere Gesundheitsdaten und gib Empfehlungen, Warnungen und einfache Ernährungs- oder Trainingspläne. Formatiere deine Antwort in Markdown mit Überschriften, Listen und Emojis.",
         },
         {
           role: "user",
@@ -80,10 +78,12 @@ export async function POST(req: Request) {
     });
 
     const text = completion.choices[0]?.message?.content || "Keine Antwort";
-
     return NextResponse.json({ text });
   } catch (error) {
     console.error("💥 Coach-Fehler:", error);
-    return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Interner Serverfehler" },
+      { status: 500 }
+    );
   }
 }

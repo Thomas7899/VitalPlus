@@ -1,12 +1,12 @@
-import { Gauge, Moon, Weight, Thermometer, LucideIcon } from 'lucide-react';
-import { db } from "@/db/client"; 
+import { Gauge, Moon, Weight, Thermometer, LucideIcon } from "lucide-react";
+import { db } from "@/db/client";
 import { healthData } from "@/db/schema";
-import { eq, gte, asc, desc, and } from 'drizzle-orm';
-import { getHealthInsights } from './health-insights';
+import { eq, gte, asc, desc, and } from "drizzle-orm";
+import { getHealthInsights } from "./health-insights";
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return 'gerade eben';
+  if (seconds < 60) return "gerade eben";
   if (seconds < 3600) return `vor ${Math.floor(seconds / 60)} Minuten`;
   if (seconds < 86400) return `vor ${Math.floor(seconds / 3600)} Stunden`;
   if (seconds < 604800) return `vor ${Math.floor(seconds / 86400)} Tagen`;
@@ -38,10 +38,10 @@ function calculateChange(
   current: number | null | undefined,
   previous: number | null | undefined
 ): string {
-  if (current == null || previous == null || previous === 0) return 'N/A';
+  if (current == null || previous == null || previous === 0) return "N/A";
   const change = ((current - previous) / previous) * 100;
-  if (Math.abs(change) < 1) return 'Stabil';
-  return `${change > 0 ? '+' : ''}${Math.round(change)}%`;
+  if (Math.abs(change) < 1) return "Stabil";
+  return `${change > 0 ? "+" : ""}${Math.round(change)}%`;
 }
 
 export async function getDashboardStats(
@@ -52,26 +52,19 @@ export async function getDashboardStats(
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
 
-  // *** Von Prisma zu Drizzle geändert ***
   const healthMetrics = await db
     .select()
     .from(healthData)
-    .where(
-      and(eq(healthData.userId, userId), gte(healthData.date, yesterday))
-    )
+    .where(and(eq(healthData.userId, userId), gte(healthData.date, yesterday)))
     .orderBy(asc(healthData.date));
-  // *** Ende der Änderung ***
 
   const todayData = healthMetrics.filter((m) => new Date(m.date) >= today);
   const yesterdayData = healthMetrics.filter(
     (m) => new Date(m.date) >= yesterday && new Date(m.date) < today
   );
 
-  const sum = (arr: (number | null | undefined)[]) =>
-    arr.filter((n): n is number => typeof n === 'number').reduce((a, b) => a + b, 0);
-
   const avg = (arr: (number | null | undefined)[]) => {
-    const vals = arr.filter((n): n is number => typeof n === 'number');
+    const vals = arr.filter((n): n is number => typeof n === "number");
     return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
   };
 
@@ -93,14 +86,14 @@ export async function getDashboardStats(
   };
 
   return {
-    steps: todayStats.steps.toLocaleString('de-DE'),
-    calories: todayStats.calories.toLocaleString('de-DE'),
+    steps: todayStats.steps.toLocaleString("de-DE"),
+    calories: todayStats.calories.toLocaleString("de-DE"),
     heartRate: todayStats.heartRate
       ? `${Math.round(todayStats.heartRate)} bpm`
-      : 'N/A',
+      : "N/A",
     sleep: todayStats.sleepHours
       ? `${todayStats.sleepHours.toFixed(1)}h`
-      : 'N/A',
+      : "N/A",
     stepsChange: calculateChange(todayStats.steps, yesterdayStats.steps),
     caloriesChange: calculateChange(
       todayStats.calories,
@@ -118,27 +111,55 @@ export async function getDashboardStats(
 }
 
 export async function getDashboardActivities(userId: string) {
-  // *** Von Prisma zu Drizzle geändert ***
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(now.getDate() - 7);
+
   const activities = await db
     .select()
     .from(healthData)
-    .where(eq(healthData.userId, userId))
+    .where(and(eq(healthData.userId, userId), gte(healthData.date, sevenDaysAgo)))
     .orderBy(desc(healthData.date))
-    .limit(3);
-  // *** Ende der Änderung ***
+    .limit(10);
 
-  const createTitle = (activity: (typeof activities)[0]) =>
-    activity.mealType ? `${activity.mealType} erfasst` : 'Aktivität erfasst';
+  const detectType = (a: (typeof activities)[0]) => {
+    if (a.steps && a.steps > 8000) return "WORKOUT";
+    if (a.heartRate && a.heartRate > 90) return "BLOOD_PRESSURE";
+    if (a.sleepHours && a.sleepHours < 6) return "SLEEP_WARNING";
+    if (a.mealType) return "MEAL";
+    return "DEFAULT";
+  };
 
-  const createDescription = (activity: (typeof activities)[0]) =>
-    activity.calories ? `${activity.calories} kcal` : 'Keine weiteren Details';
+  const createTitle = (a: (typeof activities)[0]) => {
+    switch (detectType(a)) {
+      case "WORKOUT":
+        return "Aktive Bewegung erfasst";
+      case "BLOOD_PRESSURE":
+        return "Hohe Herzfrequenz erkannt";
+      case "SLEEP_WARNING":
+        return "Zu wenig Schlaf";
+      case "MEAL":
+        return `${a.mealType} erfasst`;
+      default:
+        return "Aktivität erfasst";
+    }
+  };
 
-  return activities.map((activity) => ({
-    id: activity.id,
-    type: activity.mealType ? 'MEAL' : 'DEFAULT',
-    title: createTitle(activity),
-    description: createDescription(activity),
-    timeAgo: timeAgo(activity.date),
+  const createDescription = (a: (typeof activities)[0]) => {
+    const desc: string[] = [];
+    if (a.steps) desc.push(`${a.steps.toLocaleString("de-DE")} Schritte`);
+    if (a.calories) desc.push(`${a.calories.toLocaleString("de-DE")} kcal`);
+    if (a.heartRate) desc.push(`Puls ${a.heartRate} bpm`);
+    if (a.sleepHours) desc.push(`${a.sleepHours.toFixed(1)}h Schlaf`);
+    return desc.join(", ") || "Keine weiteren Details";
+  };
+
+  return activities.map((a) => ({
+    id: a.id,
+    type: detectType(a),
+    title: createTitle(a),
+    description: createDescription(a),
+    timeAgo: timeAgo(a.date),
   }));
 }
 
@@ -163,9 +184,7 @@ export async function getDashboardTrends(
   const healthMetrics = await db
     .select()
     .from(healthData)
-    .where(
-      and(eq(healthData.userId, userId), gte(healthData.date, yesterday))
-    )
+    .where(and(eq(healthData.userId, userId), gte(healthData.date, yesterday)))
     .orderBy(asc(healthData.date));
 
   const todayData = healthMetrics.filter((m) => new Date(m.date) >= today);
@@ -174,57 +193,56 @@ export async function getDashboardTrends(
   );
 
   const avg = (arr: (number | null | undefined)[]) => {
-    const vals = arr.filter((n): n is number => typeof n === 'number');
+    const vals = arr.filter((n): n is number => typeof n === "number");
     return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
   };
 
   const latest =
-    todayData[todayData.length - 1] ??
-    yesterdayData[yesterdayData.length - 1];
+    todayData[todayData.length - 1] ?? yesterdayData[yesterdayData.length - 1];
 
   return [
     {
-      id: 'heartRate',
-      title: 'Herzfrequenz',
-      value: latest?.heartRate ? `${Math.round(latest.heartRate)} bpm` : 'N/A',
+      id: "heartRate",
+      title: "Herzfrequenz",
+      value: latest?.heartRate ? `${Math.round(latest.heartRate)} bpm` : "N/A",
       change: calculateChange(
         avg(todayData.map((d) => d.heartRate)),
         avg(yesterdayData.map((d) => d.heartRate))
       ),
-      color: 'purple',
+      color: "purple",
       icon: Gauge,
     },
     {
-      id: 'weight',
-      title: 'Gewicht',
-      value: latest?.weight ? `${latest.weight.toFixed(1)} kg` : 'N/A',
+      id: "weight",
+      title: "Gewicht",
+      value: latest?.weight ? `${latest.weight.toFixed(1)} kg` : "N/A",
       change: calculateChange(
         avg(todayData.map((d) => d.weight)),
         avg(yesterdayData.map((d) => d.weight))
       ),
-      color: 'blue',
+      color: "blue",
       icon: Weight,
     },
     {
-      id: 'bodyTemp',
-      title: 'Körpertemperatur',
-      value: latest?.bodyTemp ? `${latest.bodyTemp.toFixed(1)} °C` : 'N/A',
+      id: "bodyTemp",
+      title: "Körpertemperatur",
+      value: latest?.bodyTemp ? `${latest.bodyTemp.toFixed(1)} °C` : "N/A",
       change: calculateChange(
         avg(todayData.map((d) => d.bodyTemp)),
         avg(yesterdayData.map((d) => d.bodyTemp))
       ),
-      color: 'orange',
+      color: "orange",
       icon: Thermometer,
     },
     {
-      id: 'sleepDuration',
-      title: 'Schlafdauer',
-      value: latest?.sleepHours ? `${latest.sleepHours.toFixed(1)}h` : 'N/A',
+      id: "sleepDuration",
+      title: "Schlafdauer",
+      value: latest?.sleepHours ? `${latest.sleepHours.toFixed(1)}h` : "N/A",
       change: calculateChange(
         avg(todayData.map((d) => d.sleepHours)),
         avg(yesterdayData.map((d) => d.sleepHours))
       ),
-      color: 'purple',
+      color: "purple",
       icon: Moon,
     },
   ];
@@ -234,17 +252,17 @@ export async function getHealthInsightsData(userId: string) {
   const insights = await getHealthInsights(userId);
   if (insights.length === 0) {
     return {
-      title: 'Dein wöchentlicher Einblick',
+      title: "Dein wöchentlicher Einblick",
       insight:
-        'Es sind noch nicht genügend Daten für eine detaillierte Analyse vorhanden.',
+        "Es sind noch nicht genügend Daten für eine detaillierte Analyse vorhanden.",
       recommendation:
-        'Erfasse deine Gesundheitsdaten regelmäßig, um wertvolle Einblicke zu erhalten.',
+        "Erfasse deine Gesundheitsdaten regelmäßig, um wertvolle Einblicke zu erhalten.",
     };
   }
 
   const primaryInsight = insights[0];
   return {
-    title: 'Dein wöchentlicher Einblick',
+    title: "Dein wöchentlicher Einblick",
     insight: `Dein Trend für '${primaryInsight.metric}' ist ${primaryInsight.trend}.`,
     recommendation: primaryInsight.recommendation,
   };
