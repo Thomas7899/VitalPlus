@@ -7,17 +7,15 @@ import { db } from "@/db/client";
 import { healthData, healthEmbeddings } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 
-// Wichtig: Verhindert Edge-Runtime-Probleme mit OpenAI-Streaming
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    // --- Debug: Body prüfen ---
+    // --- Request Body prüfen ---
     const bodyText = await req.text();
-    console.log("📥 Request Body (raw):", bodyText);
+    console.log("📥 Raw body:", bodyText);
 
-    // Versuche, JSON zu parsen
     let parsed: { userId?: string; goal?: string } = {};
     try {
       parsed = JSON.parse(bodyText);
@@ -32,6 +30,8 @@ export async function POST(req: Request) {
       console.error("❌ Kein userId im Request-Body gefunden.");
       return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
     }
+
+    console.log("✅ Anfrage korrekt empfangen:", { userId, goal });
 
     // --- Datenbankabfragen ---
     const [recent, embeddingResult] = await Promise.all([
@@ -55,8 +55,12 @@ export async function POST(req: Request) {
         .limit(1),
     ]);
 
+    console.log("📊 Daten geladen:", {
+      recentCount: recent.length,
+      embeddingFound: embeddingResult.length > 0,
+    });
+
     if (recent.length === 0) {
-      console.warn("⚠️ Keine Gesundheitsdaten gefunden für userId:", userId);
       return NextResponse.json(
         { error: "Keine Gesundheitsdaten gefunden" },
         { status: 404 }
@@ -77,42 +81,32 @@ export async function POST(req: Request) {
         )
         .join("\n");
 
-    // --- Testweise: nur Logging & Rückgabe ---
-    // 👇 Schritt 1: Nur prüfen, ob alles korrekt ankommt
-    console.log("✅ Eingehende Daten korrekt:", { userId, goal, summaryLength: summary.length });
+    console.log("🧠 Sende Daten an OpenAI, Summary-Länge:", summary.length);
 
-    // Temporär den KI-Teil deaktivieren (Debug)
-    return NextResponse.json({
-      success: true,
-      message: "Request erfolgreich verarbeitet (KI deaktiviert für Test)",
-      received: { userId, goal },
-      recentCount: recent.length,
-    });
-
-    // --- Schritt 2: KI-Teil wieder aktivieren, wenn das funktioniert ---
-    /*
+    // --- KI-Antwort generieren ---
     const result = await streamText({
       model: openai("gpt-4o-mini"),
       system: `
-      Du bist ein digitaler Gesundheitscoach.
-      Analysiere Gesundheitsdaten und gib Empfehlungen, Warnungen und einfache Ernährungs- oder Trainingspläne.
-      Formatiere deine Antwort in Markdown:
-      1. **Zusammenfassung**
-      2. **Warnungen**
-      3. **Empfehlungen**
+Du bist ein digitaler Gesundheitscoach.
+Analysiere Gesundheitsdaten und gib Empfehlungen, Warnungen und einfache Ernährungs- oder Trainingspläne.
+Formatiere deine Antwort in Markdown:
+1. **Zusammenfassung**
+2. **Warnungen**
+3. **Empfehlungen**
       `,
       prompt: `
-      Gesundheitsdaten:
-      ${summary}
+Gesundheitsdaten:
+${summary}
 
-      Ziel des Nutzers: ${goal || "Gesund bleiben"}
+Ziel des Nutzers: ${goal || "Gesund bleiben"}
       `,
     });
 
+    console.log("✅ KI-Antwort erfolgreich generiert");
+
     return result.toTextStreamResponse();
-    */
   } catch (error) {
     console.error("💥 Coach-Fehler:", error);
-    return NextResponse.json({ error: "Interner Fehler" }, { status: 500 });
+    return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
 }
