@@ -1,38 +1,25 @@
 // app/api/health/coach/route.ts
 
 import { NextResponse } from "next/server";
-import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import OpenAI from "openai";
 import { db } from "@/db/client";
 import { healthData, healthEmbeddings } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 
-export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
   try {
-    // --- Request Body prüfen ---
-    const bodyText = await req.text();
-    console.log("📥 Raw body:", bodyText);
-
-    let parsed: { userId?: string; goal?: string } = {};
-    try {
-      parsed = JSON.parse(bodyText);
-    } catch (e) {
-      console.error("❌ Fehler beim JSON-Parsing:", e);
-      return NextResponse.json({ error: "Ungültiges JSON im Request" }, { status: 400 });
-    }
-
-    const { userId, goal } = parsed;
+    const body = await req.json();
+    const { userId, goal } = body;
 
     if (!userId) {
-      console.error("❌ Kein userId im Request-Body gefunden.");
       return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
     }
 
-    console.log("✅ Anfrage korrekt empfangen:", { userId, goal });
-
-    // --- Datenbankabfragen ---
     const [recent, embeddingResult] = await Promise.all([
       db
         .select()
@@ -53,11 +40,6 @@ export async function POST(req: Request) {
         .where(eq(healthEmbeddings.userId, userId))
         .limit(1),
     ]);
-
-    console.log("📊 Daten geladen:", {
-      recentCount: recent.length,
-      embeddingFound: embeddingResult.length > 0,
-    });
 
     if (recent.length === 0) {
       return NextResponse.json(
@@ -80,30 +62,26 @@ export async function POST(req: Request) {
         )
         .join("\n");
 
-    console.log("🧠 Sende Daten an OpenAI, Summary-Länge:", summary.length);
-
-    // --- KI-Antwort generieren ---
-    const result = await streamText({
-      model: openai("gpt-4o-mini"),
-      system: `
-Du bist ein digitaler Gesundheitscoach.
-Analysiere Gesundheitsdaten und gib Empfehlungen, Warnungen und einfache Ernährungs- oder Trainingspläne.
-Formatiere deine Antwort in Markdown:
-1. **Zusammenfassung**
-2. **Warnungen**
-3. **Empfehlungen**
-      `,
-      prompt: `
-Gesundheitsdaten:
-${summary}
-
-Ziel des Nutzers: ${goal || "Gesund bleiben"}
-      `,
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Du bist ein digitaler Gesundheitscoach. Analysiere Gesundheitsdaten und gib Empfehlungen, Warnungen und einfache Ernährungs- oder Trainingspläne. Formatiere deine Antwort in Markdown: 1. **Zusammenfassung** 2. **Warnungen** 3. **Empfehlungen**",
+        },
+        {
+          role: "user",
+          content: `Gesundheitsdaten:\n${summary}\n\nZiel des Nutzers: ${
+            goal || "Gesund bleiben"
+          }`,
+        },
+      ],
     });
 
-    console.log("✅ KI-Antwort erfolgreich generiert");
+    const text = completion.choices[0]?.message?.content || "Keine Antwort";
 
-    return result.toTextStreamResponse();
+    return NextResponse.json({ text });
   } catch (error) {
     console.error("💥 Coach-Fehler:", error);
     return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
