@@ -34,13 +34,13 @@ export default async function DashboardPage() {
   return (
     <div className="container mx-auto p-4 space-y-10">
       <DashboardHeader />
+      <HealthAlerts userId={userId} />
       <Suspense>
         <StatsData userId={userId} />
       </Suspense>
-      <HealthAlerts userId={userId} />
       <HealthInsights userId={userId} />
-      <DailyPlan userId={userId} />
       <DashboardQuickActions />
+      <DailyPlan userId={userId} />
       <DashboardActivities userId={userId} />
       {/* <Suspense> <TrendsData userId={userId} /> </Suspense> */}
     </div>
