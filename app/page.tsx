@@ -7,6 +7,7 @@ import { DashboardQuickActions } from "@/components/dashboard/DashboardQuickActi
 import { DashboardActivities } from "@/components/dashboard/DashboardActivities";
 import { HealthInsights } from "@/components/dashboard/HealthInsights";
 import { DailyPlan } from "@/components/health/DailyPlan";
+import { HealthAlerts } from "@/components/health/HealthAlerts";
 import {
   getDashboardStats,
 } from "@/lib/data";
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
       <Suspense>
         <StatsData userId={userId} />
       </Suspense>
+      <HealthAlerts userId={userId} />
       <HealthInsights userId={userId} />
       <DailyPlan userId={userId} />
       <DashboardQuickActions />
