@@ -1,28 +1,30 @@
+// app/api/health/recommend/route.ts
 import OpenAI from "openai";
 import { db } from "@/db/client";
 import { sql } from "drizzle-orm";
+import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: Request) {
   try {
-    const { queryText } = await req.json();
+    const { userId, queryText } = await req.json();
 
-    if (!queryText) {
+    if (!userId || !queryText) {
       return new Response(
-        JSON.stringify({ error: "Missing queryText" }),
+        JSON.stringify({ error: "Missing userId or queryText" }),
         { status: 400 }
       );
     }
 
-    // 🔹 1. Generate embedding from input text
+    await updateHealthEmbeddingForUser(userId);
+
     const embeddingResponse = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input: queryText,
     });
     const queryEmbedding = embeddingResponse.data[0].embedding;
 
-    // 🔹 2. Query similar embeddings from Postgres (using Drizzle raw SQL)
     const similarEntries = await db.execute(sql`
       SELECT id, "userId", content
       FROM "HealthEmbedding"
@@ -30,12 +32,10 @@ export async function POST(req: Request) {
       LIMIT 3;
     `);
 
-    // 🔹 3. Combine retrieved context
     const context = (similarEntries.rows ?? [])
       .map((r: any) => r.content)
       .join("\n---\n");
 
-    // 🔹 4. Generate recommendation with GPT
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -51,8 +51,7 @@ Meine aktuelle Situation: ${queryText}
 Ähnliche vergangene Gesundheitsdaten:
 ${context}
 
-Bitte gib mir eine klare, motivierende Empfehlung mit Fokus auf
-Ernährung, Bewegung und Erholung.
+Bitte gib mir eine klare, motivierende Empfehlung mit Fokus auf Ernährung, Bewegung und Erholung.
           `,
         },
       ],

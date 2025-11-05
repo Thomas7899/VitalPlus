@@ -1,3 +1,4 @@
+// db/seed.ts
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { db } from "./client";
@@ -18,9 +19,9 @@ async function main() {
     id: userId,
     email: "john.doe@example.com",
     name: "John Doe",
-    height: 1.75,
+    height: 1.79,
     gender: "männlich",
-    dateOfBirth: new Date("1990-01-01"),
+    dateOfBirth: new Date("1995-01-01"),
     password: hashedPassword,
   });
 

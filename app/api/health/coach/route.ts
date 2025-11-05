@@ -1,8 +1,10 @@
+// app/api/health/coach/route.ts
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { db } from "@/db/client";
 import { healthData, healthEmbeddings } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,6 +19,8 @@ export async function POST(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
     }
+
+    await updateHealthEmbeddingForUser(userId);
 
     const [recent, embeddingResult] = await Promise.all([
       db
@@ -67,15 +71,15 @@ export async function POST(req: Request) {
         {
           role: "system",
           content: `
-            Du bist ein digitaler Gesundheitscoach. Analysiere die Gesundheitsdaten.
-            Gib deine Antwort IMMER als valides JSON-Objekt zurück.
-            Das Objekt soll einen Schlüssel "sections" haben, der ein Array ist.
-            Jedes Objekt im Array soll diesem Schema folgen:
-            { 
-              "title": string, 
-              "content": string (Markdown-formatiert), 
-              "type": "summary" | "warning" | "nutrition" | "training" | "sleep" | "info" 
-            }
+Du bist ein digitaler Gesundheitscoach. Analysiere die Gesundheitsdaten.
+Gib deine Antwort IMMER als valides JSON-Objekt zurück.
+Das Objekt soll einen Schlüssel "sections" haben, der ein Array ist.
+Jedes Objekt im Array soll diesem Schema folgen:
+{ 
+  "title": string, 
+  "content": string (Markdown-formatiert), 
+  "type": "summary" | "warning" | "nutrition" | "training" | "sleep" | "info" 
+}
           `,
         },
         {
@@ -98,7 +102,6 @@ export async function POST(req: Request) {
 
     const parsedJson = JSON.parse(content);
     return NextResponse.json(parsedJson);
-
   } catch (error) {
     console.error("💥 Coach-Fehler:", error);
     return NextResponse.json(

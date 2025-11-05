@@ -1,3 +1,4 @@
+// lib/data.ts
 import { Gauge, Moon, Weight, Thermometer, LucideIcon } from "lucide-react";
 import { db } from "@/db/client";
 import { healthData } from "@/db/schema";

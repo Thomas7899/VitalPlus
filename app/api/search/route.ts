@@ -1,3 +1,4 @@
+// app/api/search/route.ts
 import OpenAI from "openai";
 import { db } from "@/db/client";
 import { sql } from "drizzle-orm";

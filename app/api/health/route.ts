@@ -1,12 +1,11 @@
-export const dynamic = "force-dynamic";
-
+// app/api/health/route.ts
 import { db } from "@/db/client";
 import { healthData } from "@/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
 
-// 🧩 Zod-Schema zur Validierung der Eingabedaten
 const healthSchema = z.object({
   userId: z.string().min(1, "userId ist erforderlich"),
   date: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Ungültiges Datum" }),
@@ -33,8 +32,6 @@ const healthSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    // Validierung mit Zod
     const parseResult = healthSchema.safeParse(body);
     if (!parseResult.success) {
       const errorDetails = parseResult.error.flatten();
@@ -46,7 +43,6 @@ export async function POST(req: NextRequest) {
 
     const data = parseResult.data;
 
-    // 🗃️ Einfügen eines Datensatzes in Drizzle
     const [healthEntry] = await db
       .insert(healthData)
       .values({
@@ -71,7 +67,9 @@ export async function POST(req: NextRequest) {
         mealType: data.mealType,
         medications: data.medications,
       })
-      .returning(); // Gibt den eingefügten Datensatz zurück
+      .returning();
+
+    await updateHealthEmbeddingForUser(data.userId);
 
     return NextResponse.json(healthEntry, { status: 201 });
   } catch (error) {
@@ -96,7 +94,6 @@ export async function GET(req: NextRequest) {
     if (from) conditions.push(gte(healthData.date, new Date(from)));
     if (to) conditions.push(lte(healthData.date, new Date(to)));
 
-    // 🗃️ Selektiere Datensätze basierend auf Filtern
     const data = await db
       .select()
       .from(healthData)
@@ -113,3 +110,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+

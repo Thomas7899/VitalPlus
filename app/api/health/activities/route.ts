@@ -1,3 +1,4 @@
+// app/api/health/activities/route.ts
 import { NextResponse } from "next/server";
 import { getDashboardActivities } from "@/lib/data";
 

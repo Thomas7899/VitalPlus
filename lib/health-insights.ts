@@ -1,3 +1,4 @@
+// lib/health-insights.ts
 import { db } from "@/db/client";
 import { healthData, healthEmbeddings } from "@/db/schema";
 import { eq, gte, asc, and } from "drizzle-orm";
@@ -23,11 +24,7 @@ function classifyTrend(delta: number): Trend {
   return "stabil";
 }
 
-function buildRecommendation(
-  metric: string,
-  trend: Trend,
-  delta: number
-): string {
+function buildRecommendation(metric: string, trend: Trend, delta: number): string {
   const percent = Math.round(delta * 100);
   switch (metric) {
     case "sleepHours":
@@ -61,9 +58,7 @@ export async function getHealthInsights(
   const entries = await db
     .select()
     .from(healthData)
-    .where(
-      and(eq(healthData.userId, userId), gte(healthData.date, fromDate))
-    )
+    .where(and(eq(healthData.userId, userId), gte(healthData.date, fromDate)))
     .orderBy(asc(healthData.date));
 
   const metrics: (keyof (typeof entries)[number])[] = [
@@ -86,10 +81,8 @@ export async function getHealthInsights(
     const recent = series.slice(-MOVING_WINDOW);
     const previous = series.slice(-(MOVING_WINDOW * 2), -MOVING_WINDOW);
 
-    const recentAvg =
-      recent.reduce((sum, v) => sum + v, 0) / recent.length;
-    const previousAvg =
-      previous.reduce((sum, v) => sum + v, 0) / previous.length;
+    const recentAvg = recent.reduce((sum, v) => sum + v, 0) / recent.length;
+    const previousAvg = previous.reduce((sum, v) => sum + v, 0) / previous.length;
 
     if (!previousAvg) return;
 
@@ -125,19 +118,24 @@ export async function updateHealthEmbeddingForUser(userId: string) {
     avgSleep: average(data.map((d) => d.sleepHours || 0)),
     avgHeartRate: average(data.map((d) => d.heartRate || 0)),
     avgWeight: average(data.map((d) => d.weight || 0)),
+    avgCalories: average(data.map((d) => d.calories || 0)),
+    avgSystolic: average(data.map((d) => d.bloodPressureSystolic || 0)),
+    avgDiastolic: average(data.map((d) => d.bloodPressureDiastolic || 0)),
+    avgOxygen: average(data.map((d) => d.oxygenSaturation || 0)),
   };
 
   const prompt = `
-    Analysiere die Gesundheitsdaten des Nutzers basierend auf:
-    - Durchschnittliche Schritte: ${summary.avgSteps}
-    - Durchschnittliche Schlafstunden: ${summary.avgSleep}
-    - Durchschnittliche Herzfrequenz: ${summary.avgHeartRate}
-    - Durchschnittliches Gewicht: ${summary.avgWeight}
+Analysiere die Gesundheitsdaten des Nutzers:
+- Schritte: ${summary.avgSteps}
+- Kalorienverbrauch: ${summary.avgCalories}
+- Schlaf: ${summary.avgSleep}h
+- Puls: ${summary.avgHeartRate} bpm
+- Gewicht: ${summary.avgWeight} kg
+- Blutdruck: ${summary.avgSystolic}/${summary.avgDiastolic} mmHg
+- Sauerstoffsättigung: ${summary.avgOxygen} %
 
-    Gib eine prägnante Zusammenfassung (ca. 50-100 Wörter) des
-    aktuellen Gesundheitszustands und der Haupttrends.
-    DIES IST DIE GRUNDLAGE FÜR ZUKÜNFTIGE KI-ANFRAGEN.
-  `;
+Gib eine prägnante Zusammenfassung (50–100 Wörter) der aktuellen Gesundheit, Trends und möglichen Empfehlungen.
+`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",

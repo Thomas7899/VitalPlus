@@ -1,3 +1,4 @@
+// app/api/embeddings/route.ts
 import OpenAI from "openai";
 import { db } from "@/db/client";
 import { healthEmbeddings } from "@/db/schema";

@@ -1,3 +1,4 @@
+//components/dashboard/HealthInsights.tsx
 "use client";
 
 import { useState, useEffect } from "react";
