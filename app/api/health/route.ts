@@ -33,10 +33,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const parseResult = healthSchema.safeParse(body);
+
     if (!parseResult.success) {
-      const errorDetails = parseResult.error.flatten();
       return NextResponse.json(
-        { error: "Ungültige Eingabedaten", details: errorDetails },
+        { error: "Ungültige Eingabedaten", details: parseResult.error.flatten() },
         { status: 400 }
       );
     }
@@ -69,15 +69,15 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    await updateHealthEmbeddingForUser(data.userId);
+    // 🔄 Embedding im Hintergrund aktualisieren
+    updateHealthEmbeddingForUser(data.userId).catch((err) =>
+      console.warn("⚠️ Embedding-Update fehlgeschlagen:", err)
+    );
 
     return NextResponse.json(healthEntry, { status: 201 });
   } catch (error) {
     console.error("Fehler beim Speichern der Gesundheitsdaten:", error);
-    return NextResponse.json(
-      { error: "Interner Serverfehler" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
 }
 
@@ -89,7 +89,6 @@ export async function GET(req: NextRequest) {
     const to = searchParams.get("to");
 
     const conditions = [];
-
     if (userId) conditions.push(eq(healthData.userId, userId));
     if (from) conditions.push(gte(healthData.date, new Date(from)));
     if (to) conditions.push(lte(healthData.date, new Date(to)));
@@ -101,13 +100,9 @@ export async function GET(req: NextRequest) {
       .orderBy(healthData.date)
       .limit(2000);
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("Fehler beim Abrufen der Gesundheitsdaten:", error);
-    return NextResponse.json(
-      { error: "Interner Serverfehler" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
 }
-

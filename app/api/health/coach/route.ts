@@ -7,33 +7,27 @@ import { eq, desc } from "drizzle-orm";
 import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 60; // ⏱️ Erhöht Timeout auf 60s
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { userId, goal } = body;
+    const { userId, goal = "Gesund bleiben" } = await req.json();
 
     if (!userId) {
       return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
     }
 
-    await updateHealthEmbeddingForUser(userId);
+    // ⏳ Embedding-Update parallelisieren
+    const embeddingPromise = updateHealthEmbeddingForUser(userId);
 
+    // 🔹 Letzte Gesundheitsdaten und vorhandenes Embedding abrufen
     const [recent, embeddingResult] = await Promise.all([
       db
         .select()
         .from(healthData)
-        .where(
-          eq(
-            healthData.userId,
-            process.env.NODE_ENV === "development"
-              ? "2fbb9c24-cdf8-49db-9b74-0762017445a1"
-              : userId
-          )
-        )
+        .where(eq(healthData.userId, userId))
         .orderBy(desc(healthData.date))
         .limit(30),
       db
@@ -41,6 +35,7 @@ export async function POST(req: Request) {
         .from(healthEmbeddings)
         .where(eq(healthEmbeddings.userId, userId))
         .limit(1),
+      embeddingPromise, // ⏱️ wird im Hintergrund fertig
     ]);
 
     if (recent.length === 0) {
@@ -56,57 +51,55 @@ export async function POST(req: Request) {
       recent
         .map(
           (d) =>
-            `Datum ${d.date.toISOString().split("T")[0]}: ${
+            `📅 ${d.date.toISOString().split("T")[0]} — Schritte: ${
               d.steps ?? 0
-            } Schritte, Puls ${d.heartRate ?? "?"}, Schlaf ${
-              d.sleepHours ?? "?"
-            }h, Gewicht ${d.weight ?? "?"}kg`
+            }, Puls: ${d.heartRate ?? "?"}, Schlaf: ${d.sleepHours ?? "?"}h, Gewicht: ${d.weight ?? "?"}kg`
         )
         .join("\n");
 
+    // 🧠 OpenAI-Analyse
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
+      temperature: 0.7,
       messages: [
         {
           role: "system",
           content: `
-Du bist ein digitaler Gesundheitscoach. Analysiere die Gesundheitsdaten.
-Gib deine Antwort IMMER als valides JSON-Objekt zurück.
-Das Objekt soll einen Schlüssel "sections" haben, der ein Array ist.
-Jedes Objekt im Array soll diesem Schema folgen:
-{ 
-  "title": string, 
-  "content": string (Markdown-formatiert), 
-  "type": "summary" | "warning" | "nutrition" | "training" | "sleep" | "info" 
+Du bist ein digitaler Gesundheitscoach. Analysiere die Gesundheitsdaten
+und gib deine Antwort IMMER als valides JSON-Objekt zurück.
+
+Das Objekt soll so aussehen:
+{
+  "sections": [
+    { "title": string, "content": string, "type": "summary" | "warning" | "nutrition" | "training" | "sleep" | "info" }
+  ]
 }
           `,
         },
         {
           role: "user",
-          content: `Gesundheitsdaten:\n${summary}\n\nZiel des Nutzers: ${
-            goal || "Gesund bleiben"
-          }`,
+          content: `Hier sind die Gesundheitsdaten:\n${summary}\n\nZiel des Nutzers: ${goal}`,
         },
       ],
     });
 
-    const content = completion.choices[0]?.message?.content;
+    const content = completion.choices[0]?.message?.content?.trim();
 
     if (!content) {
-      return NextResponse.json(
-        { error: "Keine Antwort von KI" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Keine Antwort von der KI" }, { status: 502 });
     }
 
-    const parsedJson = JSON.parse(content);
-    return NextResponse.json(parsedJson);
+    let parsedJson;
+    try {
+      parsedJson = JSON.parse(content);
+    } catch {
+      parsedJson = { sections: [{ title: "Fehler", content, type: "info" }] };
+    }
+
+    return NextResponse.json(parsedJson, { status: 200 });
   } catch (error) {
     console.error("💥 Coach-Fehler:", error);
-    return NextResponse.json(
-      { error: "Interner Serverfehler" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
 }

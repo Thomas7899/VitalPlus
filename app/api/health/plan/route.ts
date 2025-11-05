@@ -4,6 +4,10 @@ import { db } from "@/db/client";
 import { healthData, healthEmbeddings } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const maxDuration = 60; // Erhöht Laufzeitlimit auf 60 Sekunden
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -12,33 +16,38 @@ export async function POST(req: Request) {
     const { userId, goal = "Gewicht halten und gesund ernähren" } = await req.json();
 
     if (!userId) {
-      return new Response(JSON.stringify({ error: "Missing userId" }), { status: 400 });
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    // 🧩 Embedding aktualisieren
-    await updateHealthEmbeddingForUser(userId);
+    // 🧩 Embedding wird asynchron aktualisiert (nicht blockierend)
+    updateHealthEmbeddingForUser(userId).catch((err) =>
+      console.warn("⚠️ Embedding update failed:", err)
+    );
 
-    // 🔹 Embedding aus DB holen
-    const [embeddingEntry] = await db
-      .select()
-      .from(healthEmbeddings)
-      .where(eq(healthEmbeddings.userId, userId))
-      .limit(1);
-
-    const recentData = await db
-      .select()
-      .from(healthData)
-      .where(eq(healthData.userId, userId))
-      .orderBy(desc(healthData.date))
-      .limit(7);
+    // 🔹 Embedding + HealthData abrufen
+    const [embeddingEntry, recentData] = await Promise.all([
+      db
+        .select()
+        .from(healthEmbeddings)
+        .where(eq(healthEmbeddings.userId, userId))
+        .limit(1)
+        .then((rows) => rows[0]),
+      db
+        .select()
+        .from(healthData)
+        .where(eq(healthData.userId, userId))
+        .orderBy(desc(healthData.date))
+        .limit(7),
+    ]);
 
     if (recentData.length === 0) {
-      return new Response(JSON.stringify({ error: "No health data found" }), { status: 404 });
+      return NextResponse.json({ error: "No health data found" }, { status: 404 });
     }
 
-    const avgCalories = average(recentData.map((d) => d.calories || 0));
-    const avgSteps = average(recentData.map((d) => d.steps || 0));
-    const avgWeight = average(recentData.map((d) => d.weight || 0));
+    // 📊 Durchschnittswerte berechnen
+    const avgCalories = average(recentData.map((d) => d.calories ?? 0));
+    const avgSteps = average(recentData.map((d) => d.steps ?? 0));
+    const avgWeight = average(recentData.map((d) => d.weight ?? 0));
 
     const context = embeddingEntry?.content || "Keine erweiterten Gesundheitsdaten verfügbar.";
 
@@ -48,7 +57,7 @@ Hier ist eine Zusammenfassung des Nutzers:
 
 ${context}
 
-Analysiere die letzten 7 Tage des Nutzers und erstelle für heute einen Vorschlag.
+Analysiere die letzten 7 Tage und erstelle für heute einen Vorschlag.
 
 Daten:
 - Durchschnittliche Kalorienaufnahme: ${avgCalories} kcal
@@ -57,34 +66,56 @@ Daten:
 
 Ziel: ${goal}
 
-Erstelle:
-1. Eine kurze Zusammenfassung der Situation
-2. Einen Ernährungsplan für heute (Frühstück, Mittag, Abendessen, Snacks)
-3. Einen Trainingsplan (z. B. Bewegung, Spazieren, Krafttraining)
-4. Eine Motivation zum Abschluss
+Erstelle bitte ein JSON-Objekt im folgenden Format:
+{
+  "summary": "Kurze Zusammenfassung der Situation",
+  "nutrition": [
+    { "meal": "Frühstück", "content": "..." },
+    { "meal": "Mittagessen", "content": "..." },
+    { "meal": "Abendessen", "content": "..." },
+    { "meal": "Snacks", "content": "..." }
+  ],
+  "training": "Empfohlene Bewegung oder Übungen",
+  "motivation": "Motivationssatz für den Tag"
+}
 `;
 
+    // 🤖 OpenAI-Aufruf
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: "Du bist ein präziser Gesundheitscoach." },
+        { role: "system", content: "Du bist ein präziser, motivierender Gesundheitscoach." },
         { role: "user", content: prompt },
       ],
       temperature: 0.8,
     });
 
-    const plan = completion.choices[0].message?.content ?? "Keine Empfehlung generiert.";
+    const result = completion.choices[0].message?.content?.trim();
 
-    return new Response(JSON.stringify({ success: true, plan }), { status: 200 });
+    if (!result) {
+      return NextResponse.json({ error: "Keine Antwort von KI" }, { status: 502 });
+    }
+
+    let plan;
+    try {
+      plan = JSON.parse(result);
+    } catch {
+      // Fallback: KI-Antwort als Text, falls kein valides JSON
+      plan = { summary: result };
+    }
+
+    return NextResponse.json({ success: true, plan }, { status: 200 });
   } catch (error) {
-    console.error("Fehler bei der Planerstellung:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to generate plan" }),
+    console.error("💥 Fehler bei der Planerstellung:", error);
+    return NextResponse.json(
+      { error: "Failed to generate plan" },
       { status: 500 }
     );
   }
 }
 
+// 🧮 Hilfsfunktion
 function average(nums: number[]): number {
   const valid = nums.filter((n) => n > 0);
   if (valid.length === 0) return 0;
