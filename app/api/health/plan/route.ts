@@ -7,7 +7,7 @@ import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-export const maxDuration = 60; // Erhöht Laufzeitlimit auf 60 Sekunden
+export const maxDuration = 60;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -19,12 +19,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    // 🧩 Embedding wird asynchron aktualisiert (nicht blockierend)
     updateHealthEmbeddingForUser(userId).catch((err) =>
       console.warn("⚠️ Embedding update failed:", err)
     );
 
-    // 🔹 Embedding + HealthData abrufen
     const [embeddingEntry, recentData] = await Promise.all([
       db
         .select()
@@ -44,7 +42,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No health data found" }, { status: 404 });
     }
 
-    // 📊 Durchschnittswerte berechnen
     const avgCalories = average(recentData.map((d) => d.calories ?? 0));
     const avgSteps = average(recentData.map((d) => d.steps ?? 0));
     const avgWeight = average(recentData.map((d) => d.weight ?? 0));
@@ -80,7 +77,6 @@ Erstelle bitte ein JSON-Objekt im folgenden Format:
 }
 `;
 
-    // 🤖 OpenAI-Aufruf
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
@@ -101,11 +97,21 @@ Erstelle bitte ein JSON-Objekt im folgenden Format:
     try {
       plan = JSON.parse(result);
     } catch {
-      // Fallback: KI-Antwort als Text, falls kein valides JSON
       plan = { summary: result };
     }
 
-    return NextResponse.json({ success: true, plan }, { status: 200 });
+    const markdownPlan = `
+### 🩺 ${plan.summary}
+
+**🍽 Ernährung**
+${plan.nutrition?.map((m: any) => `- **${m.meal}:** ${m.content}`).join("\n")}
+
+**💪 Training:** ${plan.training}
+
+**💬 Motivation:** ${plan.motivation}
+`;
+
+    return NextResponse.json({ plan: markdownPlan }, { status: 200 });
   } catch (error) {
     console.error("💥 Fehler bei der Planerstellung:", error);
     return NextResponse.json(
@@ -115,7 +121,6 @@ Erstelle bitte ein JSON-Objekt im folgenden Format:
   }
 }
 
-// 🧮 Hilfsfunktion
 function average(nums: number[]): number {
   const valid = nums.filter((n) => n > 0);
   if (valid.length === 0) return 0;

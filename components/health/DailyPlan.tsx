@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Salad, Dumbbell, Sparkles } from "lucide-react";
+import { Loader2, Salad, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
@@ -31,7 +31,7 @@ export function DailyPlan({ userId }: { userId: string }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Fehler bei der Planung");
       setPlan(data.plan);
-    } catch (err) {
+    } catch {
       setPlan("❌ Plan konnte nicht erstellt werden.");
     } finally {
       setLoading(false);
