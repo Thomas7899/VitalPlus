@@ -11,27 +11,29 @@ export type MetricKey =
   | "bloodPressureDiastolic" 
   | "oxygenSaturation" 
   | "bodyTemp" 
-  | "respiratoryRate";
+  | "respiratoryRate"
+  | "muscleMass"  
+  | "bodyFat"    
+  | "bmi";       
 
 export interface Metric {
   key: MetricKey;
   label: string;
   unit: string;
   color?: string;
-  category?: "Activity" | "Vital" | "Regeneration" | "Nutrition" | "Fitness" | "Vitalwerte";
+  category?: "Activity" | "Vital" | "Regeneration" | "Nutrition" | "Fitness" | "Vitalwerte" | "Körperwerte";
 }
 
 export interface HealthDataPoint {
   id: string;
   date: string | Date;
-  // Optionale Werte, da nicht jeder Datensatz alles hat
   steps?: number;
   heartRate?: number;
   weight?: number;
   sleepHours?: number;
   calories?: number;
   bodyTemp?: number;
-  // Index Signature für dynamischen Zugriff in Charts (d[metric.key])
+  // Index Signature für dynamischen Zugriff
   [key: string]: any; 
 }
 
