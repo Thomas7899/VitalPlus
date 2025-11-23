@@ -1,3 +1,4 @@
+// components/layout/SidebarLayout.tsx
 "use client";
 
 import { useState } from "react";
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { signOut } from "next-auth/react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -95,9 +97,12 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
             </nav>
           </div>
 
-          <div className="p-4 border-t border-slate-200/50 text-center text-xs text-slate-400">
-            © 2025 Vital+ App
-          </div>
+          <div className="p-4 border-t border-slate-200/50 dark:border-slate-800">
+  <div className="flex items-center justify-between">
+    <p className="text-xs text-slate-400">© 2025 Vital+ App</p>
+    <ThemeToggle />
+  </div>
+</div>
         </div>
       </div>
 

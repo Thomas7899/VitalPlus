@@ -5,6 +5,7 @@ import { healthData, healthEmbeddings } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
 import { NextResponse } from "next/server";
+import { generateDailyPlanPrompt, HEALTH_COACH_SYSTEM_PROMPT } from "@/lib/prompts";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -48,40 +49,20 @@ export async function POST(req: Request) {
 
     const context = embeddingEntry?.content || "Keine erweiterten Gesundheitsdaten verfügbar.";
 
-    const prompt = `
-Du bist ein digitaler Ernährungs- und Fitnesscoach.
-Hier ist eine Zusammenfassung des Nutzers:
-
-${context}
-
-Analysiere die letzten 7 Tage und erstelle für heute einen Vorschlag.
-
-Daten:
-- Durchschnittliche Kalorienaufnahme: ${avgCalories} kcal
-- Durchschnittliche Schritte: ${avgSteps}
-- Durchschnittliches Gewicht: ${avgWeight} kg
-
-Ziel: ${goal}
-
-Erstelle bitte ein JSON-Objekt im folgenden Format:
-{
-  "summary": "Kurze Zusammenfassung der Situation",
-  "nutrition": [
-    { "meal": "Frühstück", "content": "..." },
-    { "meal": "Mittagessen", "content": "..." },
-    { "meal": "Abendessen", "content": "..." },
-    { "meal": "Snacks", "content": "..." }
-  ],
-  "training": "Empfohlene Bewegung oder Übungen",
-  "motivation": "Motivationssatz für den Tag"
-}
-`;
+    // Prompt-Generierung ausgelagert
+    const prompt = generateDailyPlanPrompt({
+      calories: avgCalories,
+      steps: avgSteps,
+      weight: avgWeight,
+      goal,
+      context
+    });
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: "Du bist ein präziser, motivierender Gesundheitscoach." },
+        { role: "system", content: HEALTH_COACH_SYSTEM_PROMPT }, // Zentraler System-Prompt
         { role: "user", content: prompt },
       ],
       temperature: 0.8,

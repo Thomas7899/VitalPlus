@@ -3,11 +3,11 @@
 import { useMemo } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Metric } from "@/components/utils/metrics";
 import { cn } from "@/lib/utils";
+import type { Metric, HealthDataPoint } from "@/types/health";
 
 interface StatCardWithChartProps {
-  data: any[];
+  data: HealthDataPoint[]; 
   metric: Metric;
 }
 
@@ -23,7 +23,7 @@ export function StatCardWithChart({ data, metric }: StatCardWithChartProps) {
     }));
 
     if (relevantData.length < 2) {
-      return { chartData, latestValue: relevantData[0]?.[metric.key], delta: 0 };
+      return { chartData, latestValue: relevantData[0]?.[metric.key] ?? 0, delta: 0 };
     }
 
     const latestValue = relevantData[relevantData.length - 1][metric.key];
@@ -44,7 +44,7 @@ export function StatCardWithChart({ data, metric }: StatCardWithChartProps) {
       <CardContent>
         <div className="flex items-baseline gap-2">
           <p className="text-4xl font-bold text-slate-900">
-            {latestValue?.toFixed(1) ?? "–"}
+            {typeof latestValue === 'number' ? latestValue.toFixed(1) : "–"}
             <span className="text-xl font-normal text-slate-500 ml-1">{metric.unit}</span>
           </p>
           {delta !== 0 && (

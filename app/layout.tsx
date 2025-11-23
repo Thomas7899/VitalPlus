@@ -4,6 +4,7 @@ import "./globals.css";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth";
+import { ThemeProvider } from "@/components/theme-provider"; 
 
 export const metadata: Metadata = {
   title: "Vital+ App",
@@ -19,10 +20,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const session = await auth();
 
   return (
-    <html lang="de" className="h-full">
-      <body className="antialiased h-full flex flex-col bg-gradient-to-br from-slate-50 to-blue-50 text-slate-900 overflow-hidden">
+    <html lang="de" className="h-full" suppressHydrationWarning> 
+      <body className="antialiased h-full flex flex-col bg-background text-foreground overflow-hidden transition-colors duration-300">
         <SessionProvider session={session}>
-          <SidebarLayout>{children}</SidebarLayout>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <SidebarLayout>{children}</SidebarLayout>
+          </ThemeProvider>
         </SessionProvider>
       </body>
     </html>

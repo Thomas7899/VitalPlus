@@ -1,9 +1,10 @@
 // lib/data.ts
-import { Gauge, Moon, Weight, Thermometer, LucideIcon } from "lucide-react";
+import { Gauge, Moon, Weight, Thermometer } from "lucide-react";
 import { db } from "@/db/client";
 import { healthData } from "@/db/schema";
 import { eq, gte, asc, desc, and, sql } from "drizzle-orm";
 import { getHealthInsights } from "./health-insights";
+import type { DashboardTrendData } from "@/types/health";
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -24,15 +25,6 @@ export type DashboardStatsData = {
   caloriesChange: string;
   heartRateChange: string;
   sleepChange: string;
-};
-
-export type DashboardTrendData = {
-  id: string;
-  title: string;
-  value: string;
-  change: string;
-  color: string;
-  icon: LucideIcon;
 };
 
 function calculateChange(
