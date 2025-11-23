@@ -1,4 +1,3 @@
-// app/api/health/alert/route.ts
 import { db } from "@/db/client";
 import { healthData } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -9,7 +8,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await req.json();
+    const { userId, goal = "Gewicht halten" } = await req.json();
 
     if (!userId) {
       return new Response(JSON.stringify({ error: "Missing userId" }), { status: 400 });
@@ -26,29 +25,62 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: "No recent data" }), { status: 404 });
     }
 
+    // 🩺 Korrekte Feldnamen laut neuem Schema
     const avgCalories = average(recent.map((d) => d.calories || 0));
     const avgSteps = average(recent.map((d) => d.steps || 0));
     const avgSleep = average(recent.map((d) => d.sleepHours || 0));
     const avgHeartRate = average(recent.map((d) => d.heartRate || 0));
+    const avgSystolic = average(recent.map((d) => d.bloodPressureSystolic || 0));
+    const avgDiastolic = average(recent.map((d) => d.bloodPressureDiastolic || 0));
 
     let alertTriggered = false;
     const alerts: string[] = [];
 
-    if (avgCalories > 2500) {
+    if (avgSystolic > 140 || avgDiastolic > 90) {
       alertTriggered = true;
-      alerts.push("⚠️ Deine Kalorienaufnahme war in den letzten Tagen überdurchschnittlich hoch.");
+      alerts.push("🩸 Dein Blutdruck war zuletzt zu hoch. Beobachte deine Werte und vermeide Stress, Salz und Alkohol.");
+    } else if (avgSystolic < 100 || avgDiastolic < 60) {
+      alertTriggered = true;
+      alerts.push("🩸 Dein Blutdruck war zuletzt niedrig. Trinke genug Wasser und bewege dich regelmäßig.");
     }
+
+    if (avgHeartRate > 85) {
+      alertTriggered = true;
+      alerts.push("❤️ Deine Herzfrequenz war zuletzt erhöht. Achte auf Ruhe, Atmung und Stressreduktion.");
+    }
+
     if (avgSteps < 6000) {
       alertTriggered = true;
       alerts.push("🚶‍♂️ Du hattest wenig Bewegung. Versuche, heute mehr Schritte zu machen.");
     }
+
     if (avgSleep < 6) {
       alertTriggered = true;
-      alerts.push("😴 Du schläfst zu wenig. Achte auf ausreichend Erholung.");
+      alerts.push("😴 Du schläfst zu wenig. Plane ausreichend Schlafzeit ein.");
     }
-    if (avgHeartRate > 85) {
-      alertTriggered = true;
-      alerts.push("❤️ Deine Herzfrequenz war zuletzt erhöht. Vermeide Stress und trinke genug Wasser.");
+
+    // Ernährung
+    if (goal.includes("abnehmen")) {
+      if (avgCalories > 2200) {
+        alertTriggered = true;
+        alerts.push("⚠️ Deine Kalorienaufnahme ist zu hoch für dein Abnehmziel.");
+      } else if (avgCalories < 1400) {
+        alertTriggered = true;
+        alerts.push("🍽️ Deine Kalorienaufnahme ist sehr niedrig. Achte auf eine ausreichende Nährstoffzufuhr.");
+      }
+    } else if (goal.includes("zunehmen")) {
+      if (avgCalories < 2500) {
+        alertTriggered = true;
+        alerts.push("🍗 Deine Kalorienaufnahme ist zu niedrig für dein Ziel, Gewicht zuzulegen.");
+      }
+    } else {
+      if (avgCalories > 2700) {
+        alertTriggered = true;
+        alerts.push("⚖️ Deine Kalorienaufnahme war zuletzt etwas hoch. Achte auf Balance.");
+      } else if (avgCalories < 1800) {
+        alertTriggered = true;
+        alerts.push("🥦 Deine Kalorienaufnahme war niedrig. Du könntest etwas mehr Energie brauchen.");
+      }
     }
 
     if (!alertTriggered) {
@@ -64,11 +96,15 @@ export async function POST(req: Request) {
 
     await updateHealthEmbeddingForUser(userId);
 
+    // 🧠 KI-Empfehlung
     const prompt = `
-Du bist ein digitaler Gesundheitscoach. Hier sind aktuelle Auffälligkeiten:
+Du bist ein digitaler Gesundheitscoach.
+Hier sind aktuelle Auffälligkeiten:
 ${alerts.join("\n")}
 
-Erstelle eine kurze, positive Reaktion mit Empfehlungen für heute:
+Das Ziel des Nutzers lautet: ${goal}
+
+Erstelle eine kurze, motivierende Empfehlung für heute:
 - Was sollte der Nutzer essen?
 - Wie könnte er sich bewegen?
 - Wie kann er sich erholen?

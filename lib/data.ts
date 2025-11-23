@@ -2,7 +2,7 @@
 import { Gauge, Moon, Weight, Thermometer, LucideIcon } from "lucide-react";
 import { db } from "@/db/client";
 import { healthData } from "@/db/schema";
-import { eq, gte, asc, desc, and } from "drizzle-orm";
+import { eq, gte, asc, desc, and, sql } from "drizzle-orm";
 import { getHealthInsights } from "./health-insights";
 
 function timeAgo(date: Date): string {
@@ -39,75 +39,60 @@ function calculateChange(
   current: number | null | undefined,
   previous: number | null | undefined
 ): string {
-  if (current == null || previous == null || previous === 0) return "N/A";
-  const change = ((current - previous) / previous) * 100;
+  if (current == null && previous == null) return "N/A";
+  if (!previous || previous === 0) return "Neu";
+  const change = ((Number(current ?? 0) - previous) / previous) * 100;
   if (Math.abs(change) < 1) return "Stabil";
   return `${change > 0 ? "+" : ""}${Math.round(change)}%`;
+}
+
+function avg(arr: (number | null | undefined)[]) {
+  const vals = arr.filter((n): n is number => typeof n === "number");
+  return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+}
+function sum(arr: (number | null | undefined)[]) {
+  const vals = arr.filter((n): n is number => typeof n === "number");
+  return vals.reduce((a, b) => a + b, 0);
+}
+function maxNumber(arr: (number | null | undefined)[]) {
+  const vals = arr.filter((n): n is number => typeof n === "number");
+  return vals.length ? Math.max(...vals) : null;
 }
 
 export async function getDashboardStats(
   userId: string
 ): Promise<DashboardStatsData> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
+  const todayAgg = await db.execute(sql`
+    SELECT 
+      COALESCE(MAX(steps), 0)::int AS steps,
+      COALESCE(SUM(calories), 0)::float AS calories,
+      COALESCE(AVG(heart_rate), 0)::float AS heart_rate,
+      COALESCE(AVG(sleep_hours), 0)::float AS sleep_hours
+    FROM health_data
+    WHERE "user_id" = ${userId} AND date::date = CURRENT_DATE
+  `);
+  const yesterdayAgg = await db.execute(sql`
+    SELECT 
+      COALESCE(MAX(steps), 0)::int AS steps,
+      COALESCE(SUM(calories), 0)::float AS calories,
+      COALESCE(AVG(heart_rate), 0)::float AS heart_rate,
+      COALESCE(AVG(sleep_hours), 0)::float AS sleep_hours
+    FROM health_data
+    WHERE "user_id" = ${userId} AND date::date = CURRENT_DATE - INTERVAL '1 day'
+  `);
 
-  const healthMetrics = await db
-    .select()
-    .from(healthData)
-    .where(and(eq(healthData.userId, userId), gte(healthData.date, yesterday)))
-    .orderBy(asc(healthData.date));
-
-  const todayData = healthMetrics.filter((m) => new Date(m.date) >= today);
-  const yesterdayData = healthMetrics.filter(
-    (m) => new Date(m.date) >= yesterday && new Date(m.date) < today
-  );
-
-  const avg = (arr: (number | null | undefined)[]) => {
-    const vals = arr.filter((n): n is number => typeof n === "number");
-    return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-  };
-
-  const latestTodayData = todayData[todayData.length - 1];
-  const latestYesterdayData = yesterdayData[yesterdayData.length - 1];
-
-  const todayStats = {
-    steps: latestTodayData?.steps ?? 0,
-    calories: latestTodayData?.calories ?? 0,
-    heartRate: avg(todayData.map((d) => d.heartRate)),
-    sleepHours: avg(todayData.map((d) => d.sleepHours)),
-  };
-
-  const yesterdayStats = {
-    steps: latestYesterdayData?.steps ?? 0,
-    calories: latestYesterdayData?.calories ?? 0,
-    heartRate: avg(yesterdayData.map((d) => d.heartRate)),
-    sleepHours: avg(yesterdayData.map((d) => d.sleepHours)),
-  };
+  const t = todayAgg.rows[0] ?? { steps: 0, calories: 0, heart_rate: 0, sleep_hours: 0 };
+  const y = yesterdayAgg.rows[0] ?? { steps: 0, calories: 0, heart_rate: 0, sleep_hours: 0 };
 
   return {
-    steps: todayStats.steps.toLocaleString("de-DE"),
-    calories: todayStats.calories.toLocaleString("de-DE"),
-    heartRate: todayStats.heartRate
-      ? `${Math.round(todayStats.heartRate)} bpm`
-      : "N/A",
-    sleep: todayStats.sleepHours
-      ? `${todayStats.sleepHours.toFixed(1)}h`
-      : "N/A",
-    stepsChange: calculateChange(todayStats.steps, yesterdayStats.steps),
-    caloriesChange: calculateChange(
-      todayStats.calories,
-      yesterdayStats.calories
-    ),
-    heartRateChange: calculateChange(
-      todayStats.heartRate,
-      yesterdayStats.heartRate
-    ),
-    sleepChange: calculateChange(
-      todayStats.sleepHours,
-      yesterdayStats.sleepHours
-    ),
+    steps: Number(t.steps).toLocaleString("de-DE"),
+    calories: Number(t.calories).toLocaleString("de-DE"),
+    heartRate: t.heart_rate ? `${Math.round(Number(t.heart_rate))} bpm` : "N/A",
+    sleep: t.sleep_hours ? `${Number(t.sleep_hours).toFixed(1)}h` : "N/A",
+    stepsChange: calculateChange(Number(t.steps), Number(y.steps)),
+    caloriesChange: calculateChange(Number(t.calories), Number(y.calories)),
+    heartRateChange: calculateChange(Number(t.heart_rate), Number(y.heart_rate)),
+    sleepChange: calculateChange(Number(t.sleep_hours), Number(y.sleep_hours)),
   };
 }
 
@@ -193,7 +178,7 @@ export async function getDashboardTrends(
     (m) => new Date(m.date) >= yesterday && new Date(m.date) < today
   );
 
-  const avg = (arr: (number | null | undefined)[]) => {
+  const _avg = (arr: (number | null | undefined)[]) => {
     const vals = arr.filter((n): n is number => typeof n === "number");
     return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
   };
@@ -206,10 +191,7 @@ export async function getDashboardTrends(
       id: "heartRate",
       title: "Herzfrequenz",
       value: latest?.heartRate ? `${Math.round(latest.heartRate)} bpm` : "N/A",
-      change: calculateChange(
-        avg(todayData.map((d) => d.heartRate)),
-        avg(yesterdayData.map((d) => d.heartRate))
-      ),
+      change: calculateChange(_avg(todayData.map((d) => d.heartRate)), _avg(yesterdayData.map((d) => d.heartRate))),
       color: "purple",
       icon: Gauge,
     },
@@ -217,10 +199,7 @@ export async function getDashboardTrends(
       id: "weight",
       title: "Gewicht",
       value: latest?.weight ? `${latest.weight.toFixed(1)} kg` : "N/A",
-      change: calculateChange(
-        avg(todayData.map((d) => d.weight)),
-        avg(yesterdayData.map((d) => d.weight))
-      ),
+      change: calculateChange(_avg(todayData.map((d) => d.weight)), _avg(yesterdayData.map((d) => d.weight))),
       color: "blue",
       icon: Weight,
     },
@@ -228,10 +207,7 @@ export async function getDashboardTrends(
       id: "bodyTemp",
       title: "Körpertemperatur",
       value: latest?.bodyTemp ? `${latest.bodyTemp.toFixed(1)} °C` : "N/A",
-      change: calculateChange(
-        avg(todayData.map((d) => d.bodyTemp)),
-        avg(yesterdayData.map((d) => d.bodyTemp))
-      ),
+      change: calculateChange(_avg(todayData.map((d) => d.bodyTemp)), _avg(yesterdayData.map((d) => d.bodyTemp))),
       color: "orange",
       icon: Thermometer,
     },
@@ -239,10 +215,7 @@ export async function getDashboardTrends(
       id: "sleepDuration",
       title: "Schlafdauer",
       value: latest?.sleepHours ? `${latest.sleepHours.toFixed(1)}h` : "N/A",
-      change: calculateChange(
-        avg(todayData.map((d) => d.sleepHours)),
-        avg(yesterdayData.map((d) => d.sleepHours))
-      ),
+      change: calculateChange(_avg(todayData.map((d) => d.sleepHours)), _avg(yesterdayData.map((d) => d.sleepHours))),
       color: "purple",
       icon: Moon,
     },
@@ -254,10 +227,8 @@ export async function getHealthInsightsData(userId: string) {
   if (insights.length === 0) {
     return {
       title: "Dein wöchentlicher Einblick",
-      insight:
-        "Es sind noch nicht genügend Daten für eine detaillierte Analyse vorhanden.",
-      recommendation:
-        "Erfasse deine Gesundheitsdaten regelmäßig, um wertvolle Einblicke zu erhalten.",
+      insight: "Es sind noch nicht genügend Daten für eine detaillierte Analyse vorhanden.",
+      recommendation: "Erfasse deine Gesundheitsdaten regelmäßig, um wertvolle Einblicke zu erhalten.",
     };
   }
 
@@ -269,6 +240,4 @@ export async function getHealthInsightsData(userId: string) {
   };
 }
 
-export type HealthInsightData = Awaited<
-  ReturnType<typeof getHealthInsightsData>
->;
+export type HealthInsightData = Awaited<ReturnType<typeof getHealthInsightsData>>;

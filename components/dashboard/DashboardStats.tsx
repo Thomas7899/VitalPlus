@@ -23,20 +23,15 @@ export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
       {displayStats.map((stat) => (
         <Card
           key={stat.id}
-          className={`
-            border-0 shadow-lg shadow-slate-200/50
-            hover:shadow-xl hover:scale-105 transition-all duration-300
-            backdrop-blur-sm 
-            ${
-              stat.color === "blue"
-                ? "bg-gradient-to-br from-blue-50 to-blue-100/70 hover:from-blue-100 hover:to-blue-200"
-                : stat.color === "orange"
-                ? "bg-gradient-to-br from-orange-50 to-orange-100/70 hover:from-orange-100 hover:to-orange-200"
-                : stat.color === "red"
-                ? "bg-gradient-to-br from-red-50 to-red-100/70 hover:from-red-100 hover:to-red-200"
-                : "bg-gradient-to-br from-purple-50 to-purple-100/70 hover:from-purple-100 hover:to-purple-200"
-            }
-          `}
+          className={`border-0 shadow-lg shadow-slate-200/50 hover:shadow-xl hover:scale-105 transition-all duration-300 backdrop-blur-sm ${
+            stat.color === "blue"
+              ? "bg-gradient-to-br from-blue-50 to-blue-100/70 hover:from-blue-100 hover:to-blue-200"
+              : stat.color === "orange"
+              ? "bg-gradient-to-br from-orange-50 to-orange-100/70 hover:from-orange-100 hover:to-orange-200"
+              : stat.color === "red"
+              ? "bg-gradient-to-br from-red-50 to-red-100/70 hover:from-red-100 hover:to-red-200"
+              : "bg-gradient-to-br from-purple-50 to-purple-100/70 hover:from-purple-100 hover:to-purple-200"
+          }`}
         >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -56,7 +51,7 @@ export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
                 </p>
               </div>
               <div
-                className={`w-12 h-12 rounded-xl bg-linear-to-br ${
+                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${
                   stat.color === "blue"
                     ? "from-blue-400 to-blue-600"
                     : stat.color === "orange"

@@ -2,17 +2,21 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { db } from "./client";
-import { users, healthData } from "./schema";
+import { users, healthData, healthEmbeddings } from "./schema";
 import { sql } from "drizzle-orm";
+import { generateEmbedding } from "../lib/embeddings";
 
 async function main() {
+  console.log("Sorge für pgvector-Extension...");
+  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector;`);
+
   console.log("Lösche alte Daten...");
-  await db.execute(sql`TRUNCATE TABLE "HealthData" RESTART IDENTITY CASCADE;`);
-  await db.execute(sql`TRUNCATE TABLE "User" RESTART IDENTITY CASCADE;`);
+  await db.execute(sql`TRUNCATE TABLE "health_embeddings" RESTART IDENTITY CASCADE;`);
+  await db.execute(sql`TRUNCATE TABLE "health_data" RESTART IDENTITY CASCADE;`);
+  await db.execute(sql`TRUNCATE TABLE "users" RESTART IDENTITY CASCADE;`);
 
   console.log("Erstelle neuen Benutzer...");
   const hashedPassword = await bcrypt.hash("password123", 10);
-
   const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1";
 
   await db.insert(users).values({
@@ -57,7 +61,6 @@ async function main() {
       bodyFat: parseFloat((Math.random() * 15 + 20).toFixed(1)),
     });
 
-    // Mahlzeiten
     const lunchTime = new Date(d);
     lunchTime.setHours(getRandomInt(12, 14), getRandomInt(0, 59));
     healthDataArray.push({ userId, date: lunchTime, calories: getRandomInt(500, 900), mealType: "Mittagessen" });
@@ -75,6 +78,23 @@ async function main() {
 
   await db.insert(healthData).values(healthDataArray);
   console.log("Seed-Daten erfolgreich erstellt.");
+
+  // Embedding-Zusammenfassung generieren + upserten
+  const content = `
+John Doe, männlich, 30 Jahre, 1.79m groß.
+Durchschnittlich ~10.000 Schritte/Tag, Puls 60–85 bpm,
+Schlafdauer ~6–8h, Gewicht ~72 kg.`;
+  const embedding = await generateEmbedding(content);
+
+  await db
+    .insert(healthEmbeddings)
+    .values({ userId, content, embedding })
+    .onConflictDoUpdate({
+      target: healthEmbeddings.userId,
+      set: { content, embedding },
+    });
+
+  console.log("✅ HealthEmbedding erfolgreich erstellt/aktualisiert.");
 }
 
 function getInitialWeight(gender: string | null): number {

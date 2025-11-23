@@ -1,3 +1,4 @@
+// app/page.tsx
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Suspense } from "react";

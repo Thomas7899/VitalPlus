@@ -1,60 +1,79 @@
+// db/schema.ts
 import {
   pgTable,
   uuid,
   varchar,
   text,
   timestamp,
-  real, 
+  real,
   integer,
   vector,
   index,
 } from "drizzle-orm/pg-core";
 
-// User
-export const users = pgTable("User", {
+//
+// ======================
+// 🧍 USERS TABLE
+// ======================
+export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   name: text("name"),
   password: text("password"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  dateOfBirth: timestamp("dateOfBirth"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  dateOfBirth: timestamp("date_of_birth"),
   gender: varchar("gender", { length: 50 }),
   height: real("height"),
 });
 
-// HealthData
-export const healthData = pgTable("HealthData", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("userId")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  date: timestamp("date").notNull(),
-  steps: integer("steps"),
-  heartRate: integer("heartRate"),
-  sleepHours: real("sleepHours"),
-  weight: real("weight"),
-  calories: real("calories"),
-  respiratoryRate: integer("respiratoryRate"),
-  bloodPressureSystolic: integer("bloodPressureSystolic"),
-  bloodPressureDiastolic: integer("bloodPressureDiastolic"),
-  bloodGroup: varchar("bloodGroup", { length: 10 }),
-  bmi: real("bmi"), 
-  bodyTemp: real("bodyTemp"),
-  oxygenSaturation: real("oxygenSaturation"),
-  stairSteps: integer("stairSteps"),
-  elevation: real("elevation"),
-  muscleMass: real("muscleMass"),
-  bodyFat: real("bodyFat"),
-  mealType: varchar("mealType", { length: 50 }),
-  medications: text("medications"),
-});
-
-// HealthEmbedding
-export const healthEmbeddings = pgTable(
-  "HealthEmbedding",
+//
+// ======================
+// ❤️ HEALTH DATA TABLE
+// ======================
+export const healthData = pgTable(
+  "health_data",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("userId")
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: timestamp("date").notNull(),
+
+    // optionale Metriken (keine Default-0s)
+    steps: integer("steps"),
+    heartRate: integer("heart_rate"),
+    sleepHours: real("sleep_hours"),
+    weight: real("weight"),
+    calories: real("calories"), // war integer -> auf real gestellt
+    respiratoryRate: integer("respiratory_rate"),
+    bloodPressureSystolic: integer("blood_pressure_systolic"),
+    bloodPressureDiastolic: integer("blood_pressure_diastolic"),
+    bloodGroup: varchar("blood_group", { length: 10 }),
+    bmi: real("bmi"),
+    bodyTemp: real("body_temp"),
+    oxygenSaturation: real("oxygen_saturation"),
+    stairSteps: integer("stair_steps"),
+    elevation: real("elevation"),
+    muscleMass: real("muscle_mass"),
+    bodyFat: real("body_fat"),
+    mealType: varchar("meal_type", { length: 50 }),
+    medications: text("medications"),
+  },
+  (table) => [
+    index("health_data_user_idx").on(table.userId),
+    index("health_data_date_idx").on(table.date),
+  ]
+);
+
+//
+// ======================
+// 🧠 HEALTH EMBEDDINGS
+// ======================
+export const healthEmbeddings = pgTable(
+  "health_embeddings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
       .notNull()
       .unique()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -62,6 +81,9 @@ export const healthEmbeddings = pgTable(
     embedding: vector("embedding", { dimensions: 1536 }),
   },
   (table) => [
-    index("embedding_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops")),
+    index("health_embeddings_hnsw_idx").using(
+      "hnsw",
+      table.embedding.op("vector_cosine_ops")
+    ),
   ]
 );

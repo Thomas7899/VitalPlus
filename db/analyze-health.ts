@@ -1,3 +1,4 @@
+// db/analyze-health.ts
 import { auth } from "@/auth"; 
 import { db } from "@/db/client";
 import { healthData } from "@/db/schema";
