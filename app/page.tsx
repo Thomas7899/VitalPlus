@@ -1,5 +1,4 @@
 // app/page.tsx
-// app/page.tsx
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Suspense } from "react";
@@ -33,18 +32,26 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-10">
+    <div className="container mx-auto p-4 space-y-8">
       <DashboardHeader />
-      <HealthAlerts userId={userId} />
-      
+
       <Suspense fallback={<DashboardSkeleton />}>
         <StatsData userId={userId} />
       </Suspense>
-      
-      <HealthInsights userId={userId} />
-      <DashboardQuickActions />
-      <DailyPlan userId={userId} />
-      <DashboardActivities userId={userId} />
+
+      <HealthAlerts userId={userId} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <HealthInsights userId={userId} />
+          <DashboardActivities userId={userId} />
+        </div>
+
+        <div className="space-y-8">
+          <DashboardQuickActions />
+          <DailyPlan userId={userId} />
+        </div>
+      </div>
     </div>
   );
 }
