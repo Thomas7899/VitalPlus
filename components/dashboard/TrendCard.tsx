@@ -1,5 +1,6 @@
+// components/dashboard/TrendCard.tsx
 import { Card, CardContent } from "@/components/ui/card";
-import type { DashboardTrendData } from "@/lib/data";
+import type { DashboardTrendData } from "@/types/health";
 
 const colorMap = {
   blue: "from-blue-400 to-blue-600",

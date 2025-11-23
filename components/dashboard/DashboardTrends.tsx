@@ -1,6 +1,6 @@
 // components/dashboard/DashboardTrends.tsx
 import { HealthInsights } from "@/components/health/HealthInsights";
-import type { DashboardTrendData } from "@/lib/data";
+import type { DashboardTrendData } from "@/types/health";
 import { TrendCard } from "./TrendCard";
 
 export function DashboardTrends({
