@@ -66,6 +66,7 @@ pnpm drizzle-kit push
 # Entwicklungsserver starten (Turbopack)
 pnpm dev
 
+
 ## 🗂 Datenbank-Architektur
 
 Das Projekt nutzt ein relationales Schema in **PostgreSQL**, erweitert um Vektor-Funktionalität für die KI.
@@ -99,3 +100,6 @@ erDiagram
         text content
         vector embedding
     }
+
+    ```
+Entwickelt von Thomas Osterlehner.
