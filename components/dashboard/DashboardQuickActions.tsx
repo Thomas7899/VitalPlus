@@ -1,73 +1,70 @@
+// components/dashboard/DashboardQuickActions.tsx
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { Activity, Utensils, Heart } from "lucide-react";
+import { Activity, Utensils, Heart, ChevronRight } from "lucide-react";
 
 const quickActions = [
   {
-    title: "Blutdruck messen",
-    description: "Neue Messung hinzufügen",
+    title: "Blutdruck erfassen",
+    description: "Neue Messung",
     icon: Activity,
     href: "/blutdruck",
-    color: "purple",
+    color: "text-purple-600",
+    bg: "bg-purple-100 dark:bg-purple-900/30",
   },
   {
-    title: "Mahlzeit eingeben",
-    description: "Kalorien tracken",
+    title: "Mahlzeit tracken",
+    description: "Kalorien & Makros",
     icon: Utensils,
     href: "/kalorien",
-    color: "orange",
+    color: "text-orange-600",
+    bg: "bg-orange-100 dark:bg-orange-900/30",
   },
   {
-    title: "Gesundheitsdaten",
-    description: "Alle Werte anzeigen",
+    title: "Alle Vitalwerte",
+    description: "Gesamtübersicht",
     icon: Heart,
-    href: "/gesundheit",
-    color: "red",
+    href: "/vitalfunktionen",
+    color: "text-red-600",
+    bg: "bg-red-100 dark:bg-red-900/30",
   },
 ];
 
 export function DashboardQuickActions() {
   return (
-    <div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-6">Schnellzugriff</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <Card className="border-0 shadow-lg shadow-slate-200/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">Schnellzugriff</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-3">
         {quickActions.map((action, index) => (
           <Link key={index} href={action.href}>
-            <Card
-              className={`
-                border-0 shadow-lg shadow-slate-200/50 
-                hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer group
-                backdrop-blur-sm 
-                ${
-                  action.color === "purple"
-                    ? "bg-gradient-to-br from-purple-50 to-purple-100/70 hover:from-purple-100 hover:to-purple-200"
-                    : action.color === "orange"
-                    ? "bg-gradient-to-br from-orange-50 to-orange-100/70 hover:from-orange-100 hover:to-orange-200"
-                    : "bg-gradient-to-br from-red-50 to-red-100/70 hover:from-red-100 hover:to-red-200"
-                }
-              `}
-            >
-              <CardHeader className="pb-3">
-                <div
-                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${
-                    action.color === "purple"
-                      ? "from-purple-400 to-purple-600"
-                      : action.color === "orange"
-                      ? "from-orange-400 to-orange-600"
-                      : "from-red-400 to-red-600"
-                  } flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                >
-                  <action.icon className="h-7 w-7 text-white" />
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group">
+              
+              <div className="flex items-center gap-4">
+                {/* Icon Box */}
+                <div className={`w-10 h-10 rounded-lg ${action.bg} flex items-center justify-center transition-colors`}>
+                  <action.icon className={`h-5 w-5 ${action.color}`} />
                 </div>
-                <CardTitle className="text-slate-800">{action.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-600">{action.description}</p>
-              </CardContent>
-            </Card>
+                
+                {/* Text */}
+                <div>
+                  <h3 className="font-medium text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors">
+                    {action.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {action.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Pfeil rechts */}
+              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+              
+            </div>
           </Link>
         ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
