@@ -18,7 +18,7 @@ export interface Metric {
   label: string;
   unit: string;
   color?: string;
-  category?: "Activity" | "Vital" | "Regeneration" | "Nutrition";
+  category?: "Activity" | "Vital" | "Regeneration" | "Nutrition" | "Fitness" | "Vitalwerte";
 }
 
 export interface HealthDataPoint {
