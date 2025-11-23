@@ -8,8 +8,6 @@
 
 ## ✨ Highlights & Tech-Stack
 
-Dieses Projekt ist ein Showcase für modernste Web-Architektur ("Bleeding Edge") mit Fokus auf **Performance**, **Typsicherheit** und **KI-Integration**.
-
 | Bereich | Technologie |
 | :--- | :--- |
 | **Frontend** | **Next.js 15** (App Router, Turbopack), **React 19**, **Tailwind CSS 4** |
