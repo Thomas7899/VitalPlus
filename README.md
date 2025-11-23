@@ -49,7 +49,6 @@ Du kannst die Anwendung direkt testen (Live-Deployment auf Vercel):
 
 Voraussetzungen: Node.js 18+, PostgreSQL Datenbank.
 
-```bash
 # Repository klonen
 git clone [https://github.com/Thomas7899/VitalPlus.git](https://github.com/Thomas7899/VitalPlus.git)
 cd VitalPlus
