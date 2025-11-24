@@ -1,115 +1,130 @@
 // components/ui/login-form.tsx
-'use client';
+"use client";
 
-import { lusitana } from '@/components/ui/fonts';
+import { useSearchParams } from "next/navigation";
+import { useActionState } from "react";
+import { authenticate } from "@/lib/actions";
+import { lusitana } from "@/components/ui/fonts";
+import { Button } from "./button";
 import {
   AtSymbolIcon,
   KeyIcon,
   ExclamationCircleIcon,
-  RocketLaunchIcon, 
-} from '@heroicons/react/24/outline';
-import { ArrowRightIcon } from '@heroicons/react/20/solid';
-import { Button } from './button';
-import { useActionState } from 'react';
-import { authenticate } from '@/lib/actions';
-import { useSearchParams } from 'next/navigation';
+} from "@heroicons/react/24/outline";
+import { ArrowRightIcon } from "@heroicons/react/20/solid";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [errorMessage, formAction, isPending] = useActionState(
     authenticate,
-    undefined,
+    undefined
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex-1 rounded-lg bg-gray-50 px-6 pb-4 pt-8">
-        <h1 className={`${lusitana.className} mb-3 text-2xl`}>
-          Willkommen zurück.
-        </h1>
-        
-        <form action={formAction} className="w-full">
+    <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4">
+      <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-[0_0_60px_rgba(168,85,247,0.25)] backdrop-blur-xl">
+        <div className="mb-6 text-center">
+          <h1
+            className={`${lusitana.className} text-3xl font-semibold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent`}
+          >
+            Willkommen zurück
+          </h1>
+          <p className="mt-2 text-sm text-slate-300">
+            Melde dich an, um deine Gesundheitsübersicht zu sehen.
+          </p>
+        </div>
+
+        <form action={formAction} className="space-y-5">
           <div>
             <label
-              className="mb-3 mt-5 block text-xs font-medium text-gray-900"
+              className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-300"
               htmlFor="email"
             >
-              Email
+              E‑Mail
             </label>
             <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                <AtSymbolIcon className="h-4 w-4 text-slate-400" />
+              </span>
               <input
-                className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm outline-2 placeholder:text-gray-500"
                 id="email"
-                type="email"
                 name="email"
-                placeholder="Enter your email address"
+                type="email"
                 required
+                placeholder="john.doe@example.com"
+                className="block w-full rounded-2xl border border-slate-700 bg-slate-900/60 py-2.5 pl-10 pr-3 text-sm text-slate-100 outline-none ring-0 transition focus:border-purple-400 focus:bg-slate-900 focus:shadow-[0_0_25px_rgba(168,85,247,0.35)]"
               />
-              <AtSymbolIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
             </div>
           </div>
-          <div className="mt-4">
+
+          <div>
             <label
-              className="mb-3 mt-5 block text-xs font-medium text-gray-900"
+              className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-300"
               htmlFor="password"
             >
-              Password
+              Passwort
             </label>
             <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                <KeyIcon className="h-4 w-4 text-slate-400" />
+              </span>
               <input
-                className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm outline-2 placeholder:text-gray-500"
                 id="password"
-                type="password"
                 name="password"
-                placeholder="Enter password"
+                type="password"
                 required
                 minLength={6}
+                placeholder="••••••••"
+                className="block w-full rounded-2xl border border-slate-700 bg-slate-900/60 py-2.5 pl-10 pr-3 text-sm text-slate-100 outline-none ring-0 transition focus:border-purple-400 focus:bg-slate-900 focus:shadow-[0_0_25px_rgba(168,85,247,0.35)]"
               />
-              <KeyIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
             </div>
           </div>
+
           <input type="hidden" name="redirectTo" value={callbackUrl} />
-          <Button className="mt-4 w-full" aria-disabled={isPending}>
-            Log in <ArrowRightIcon className="ml-auto h-5 w-5 text-gray-50" />
+
+          <Button
+            className="mt-2 w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
+            aria-disabled={isPending}
+          >
+            Einloggen
+            <ArrowRightIcon className="ml-auto h-4 w-4 text-slate-50" />
           </Button>
         </form>
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-300" />
+            <span className="w-full border-t border-slate-700" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-gray-50 px-2 text-gray-500">
-              Oder für Recruiter
+            <span className="bg-slate-900/80 px-3 text-[10px] tracking-[0.18em] text-slate-400">
+              Oder Schnellzugriff
             </span>
           </div>
         </div>
 
-        {/* --- Demo-Login Button --- */}
         <form action={formAction}>
           <input type="hidden" name="email" value="john.doe@example.com" />
           <input type="hidden" name="password" value="password123" />
           <input type="hidden" name="redirectTo" value={callbackUrl} />
-          
-          <Button 
-            className="w-full bg-white text-gray-900 border border-gray-300 hover:bg-gray-100 mt-0" 
+          <Button
+            variant="outline"
+            className="w-full rounded-2xl border-slate-700 bg-slate-900/60 text-sm font-medium text-slate-100 hover:border-purple-400 hover:bg-slate-900"
             aria-disabled={isPending}
           >
-            🚀 Demo-Login (1-Klick)
+            Demo‑Login (1‑Klick)
           </Button>
         </form>
 
-        {/* --- Fehlermeldungen --- */}
         <div
-          className="flex h-8 items-end space-x-1 mt-2"
+          className="mt-3 flex min-h-[1.5rem] items-center space-x-2 text-sm"
           aria-live="polite"
           aria-atomic="true"
         >
           {errorMessage && (
             <>
-              <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
-              <p className="text-sm text-red-500">{errorMessage}</p>
+              <ExclamationCircleIcon className="h-4 w-4 text-red-400" />
+              <p className="text-xs text-red-400">{errorMessage}</p>
             </>
           )}
         </div>
