@@ -1,24 +1,26 @@
 // app/page.tsx
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 import { Suspense } from "react";
+import { auth } from "@/lib/auth";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardQuickActions } from "@/components/dashboard/DashboardQuickActions";
 import { DashboardActivities } from "@/components/dashboard/DashboardActivities";
-import { HealthInsights } from "@/components/dashboard/HealthInsights";
-import { DailyPlan } from "@/components/health/DailyPlan";
-import { HealthAlerts } from "@/components/health/HealthAlerts";
-import { getDashboardStats } from "@/lib/data";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { getDashboardStats } from "@/lib/data";
+import { AICockpit } from "@/components/dashboard/AICockpit";
 
 async function StatsData({ userId }: { userId: string }) {
   const statsData = await getDashboardStats(userId);
   const stats = statsData || {
-    steps: "0", stepsChange: "0%",
-    calories: "0", caloriesChange: "0%",
-    heartRate: "0", heartRateChange: "0%",
-    sleep: "0", sleepChange: "0%",
+    steps: "0",
+    stepsChange: "0%",
+    calories: "0",
+    caloriesChange: "0%",
+    heartRate: "0",
+    heartRateChange: "0%",
+    sleep: "0",
+    sleepChange: "0%",
   };
   return <DashboardStats stats={stats} />;
 }
@@ -27,30 +29,30 @@ export default async function DashboardPage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  if (!userId) {
-    redirect("/login");
-  }
+  if (!userId) redirect("/login");
 
   return (
-    <div className="container mx-auto p-4 space-y-8">
+    <div className="container mx-auto max-w-6xl space-y-10 px-4 pb-12 pt-6">
       <DashboardHeader />
 
-      <Suspense fallback={<DashboardSkeleton />}>
-        <StatsData userId={userId} />
-      </Suspense>
+      <div className="surface-panel p-6 sm:p-8">
+        <Suspense fallback={<DashboardSkeleton />}>
+          <StatsData userId={userId} />
+        </Suspense>
+      </div>
 
-      <HealthAlerts userId={userId} />
+      <AICockpit userId={userId} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <HealthInsights userId={userId} />
+      <div className="grid gap-8 lg:grid-cols-2">
+        <section className="glass-panel p-6 sm:p-8">
+          <h2 className="section-title">Letzte Aktivitäten</h2>
           <DashboardActivities userId={userId} />
-        </div>
+        </section>
 
-        <div className="space-y-8">
+        <section className="glass-panel p-6 sm:p-8">
+          <h2 className="section-title">Schnellzugriffe</h2>
           <DashboardQuickActions />
-          <DailyPlan userId={userId} />
-        </div>
+        </section>
       </div>
     </div>
   );
