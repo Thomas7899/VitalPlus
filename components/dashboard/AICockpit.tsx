@@ -19,7 +19,7 @@ export function AICockpit({ userId }: Props) {
         </p>
         <h2 className="text-2xl font-semibold text-foreground">Command Hub</h2>
         <p className="text-sm text-muted-foreground">
-          Alerts, tiefere Analysen und dein persönlicher Tagesplan – ohne harte Übergänge.
+          Alerts, tiefere Analysen und dein persönlicher Tagesplan.
         </p>
       </div>
 
