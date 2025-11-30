@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -80,12 +80,16 @@ export default function KoerperzusammensetzungPage() {
     fetcher
   );
 
-  const lastEntry = healthData
-    ?.filter((d: any) => d.weight != null)
-    ?.sort(
-      (a: any, b: any) =>
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-    )[0];
+  const lastEntry = useMemo(
+    () =>
+      healthData
+        ?.filter((d: any) => d.weight != null)
+        ?.sort(
+          (a: any, b: any) =>
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        )[0],
+    [healthData]
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -110,42 +114,45 @@ export default function KoerperzusammensetzungPage() {
     [healthData]
   );
 
-  async function onSubmit(data: FormValues) {
-    if (!userId) {
-      toast.error("Bitte melden Sie sich an, um Daten zu speichern.");
-      return;
-    }
+  const handleSubmit = useCallback(
+    async (data: FormValues) => {
+      if (!userId) {
+        toast.error("Bitte melden Sie sich an, um Daten zu speichern.");
+        return;
+      }
 
-    if (Object.values(data).every((v) => v === undefined)) {
-      return toast.error("Bitte geben Sie mindestens einen Wert ein.");
-    }
+      if (Object.values(data).every((v) => v === undefined)) {
+        return toast.error("Bitte geben Sie mindestens einen Wert ein.");
+      }
 
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/api/health", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          userId,
-          date: new Date().toISOString(),
-        }),
-      });
-      if (!response.ok) throw new Error("Fehler beim Speichern.");
-      toast.success("Daten gespeichert!");
-      mutate(`/api/health?userId=${userId}`);
-      form.reset({
-        weight: data.weight,
-        bmi: data.bmi,
-        muscleMass: data.muscleMass,
-        bodyFat: data.bodyFat,
-      });
-    } catch (error) {
-      toast.error("Speichern fehlgeschlagen.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+      setIsSubmitting(true);
+      try {
+        const response = await fetch("/api/health", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...data,
+            userId,
+            date: new Date().toISOString(),
+          }),
+        });
+        if (!response.ok) throw new Error("Fehler beim Speichern.");
+        toast.success("Daten gespeichert!");
+        mutate(`/api/health?userId=${userId}`);
+        form.reset({
+          weight: data.weight,
+          bmi: data.bmi,
+          muscleMass: data.muscleMass,
+          bodyFat: data.bodyFat,
+        });
+      } catch (error) {
+        toast.error("Speichern fehlgeschlagen.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [userId, form]
+  );
 
   const currentWeight = form.watch("weight");
 
@@ -164,7 +171,7 @@ export default function KoerperzusammensetzungPage() {
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit(handleSubmit)}
               className="space-y-4"
             >
               <div className="grid gap-4 md:grid-cols-[2fr,3fr]">

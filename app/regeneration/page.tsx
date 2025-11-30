@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -102,36 +102,39 @@ export default function RegenerationPage() {
     [healthData]
   );
 
-  async function onSubmit(data: FormValues) {
-    if (!userId) {
-      toast.error("Bitte melde dich an, um Daten zu speichern.");
-      return;
-    }
-    if (!data.sleepHours) {
-      return toast.error("Bitte gib einen Wert ein.");
-    }
+  const handleSubmit = useCallback(
+    async (data: FormValues) => {
+      if (!userId) {
+        toast.error("Bitte melde dich an, um Daten zu speichern.");
+        return;
+      }
+      if (!data.sleepHours) {
+        return toast.error("Bitte gib einen Wert ein.");
+      }
 
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/api/health", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          date: new Date().toISOString(),
-          sleepHours: data.sleepHours,
-        }),
-      });
-      if (!response.ok) throw new Error("Fehler beim Speichern.");
-      toast.success("Schlafdauer gespeichert ✅");
-      mutate(`/api/health?userId=${userId}`);
-      form.reset({ sleepHours: data.sleepHours });
-    } catch (error) {
-      toast.error("Speichern fehlgeschlagen.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+      setIsSubmitting(true);
+      try {
+        const response = await fetch("/api/health", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            date: new Date().toISOString(),
+            sleepHours: data.sleepHours,
+          }),
+        });
+        if (!response.ok) throw new Error("Fehler beim Speichern.");
+        toast.success("Schlafdauer gespeichert ✅");
+        mutate(`/api/health?userId=${userId}`);
+        form.reset({ sleepHours: data.sleepHours });
+      } catch (error) {
+        toast.error("Speichern fehlgeschlagen.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [userId, form]
+  );
 
   const currentSleep = form.watch("sleepHours");
 
@@ -148,7 +151,7 @@ export default function RegenerationPage() {
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit(handleSubmit)}
               className="space-y-4 max-w-md"
             >
               <FormField

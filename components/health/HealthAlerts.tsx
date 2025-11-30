@@ -1,7 +1,7 @@
 // components/health/HealthAlerts.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AlertTriangle, Brain, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -14,20 +14,23 @@ export function HealthAlerts({ userId }: { userId: string }) {
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const checkAlerts = async () => {
-    if (!userId) return;
+    if (!userId || isPending) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/health/alert", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+      await startTransition(async () => {
+        const res = await fetch("/api/health/alert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Fehler beim Laden der Alerts");
+        setAlerts(data.alerts || []);
+        setRecommendation(data.recommendation || null);
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Fehler beim Laden der Alerts");
-      setAlerts(data.alerts || []);
-      setRecommendation(data.recommendation || null);
     } catch (error) {
       console.error(error);
       setAlerts(["⚠️ Gesundheitsdaten konnten nicht analysiert werden."]);
@@ -41,6 +44,8 @@ export function HealthAlerts({ userId }: { userId: string }) {
     checkAlerts();
   }, [userId]);
 
+  const busy = loading || isPending;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -52,9 +57,9 @@ export function HealthAlerts({ userId }: { userId: string }) {
           variant="outline"
           size="sm"
           onClick={checkAlerts}
-          disabled={loading}
+          disabled={busy}
         >
-          {loading ? (
+          {busy ? (
             <>
               <Loader2 className="animate-spin mr-2 h-4 w-4" />
               Analysiere...
@@ -65,11 +70,11 @@ export function HealthAlerts({ userId }: { userId: string }) {
         </Button>
       </div>
 
-      {loading && (
+      {busy && (
         <p className="text-muted-foreground text-sm">Prüfe aktuelle Gesundheitsdaten...</p>
       )}
 
-      {!loading && checked && alerts.length === 0 && (
+      {!busy && checked && alerts.length === 0 && (
         <Card className="border-l-4 border-l-green-500 bg-green-50/40 dark:bg-green-950/30">
           <CardHeader>
             <CardTitle className="text-green-600">Alles im grünen Bereich 🌿</CardTitle>
@@ -80,7 +85,7 @@ export function HealthAlerts({ userId }: { userId: string }) {
         </Card>
       )}
 
-      {alerts.length > 0 && (
+      {!busy && alerts.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}

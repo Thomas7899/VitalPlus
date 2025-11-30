@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -126,41 +126,44 @@ export default function VitalfunktionenPage() {
     [healthData]
   );
 
-  async function onSubmit(data: FormValues) {
-    if (!userId) {
-      toast.error("Bitte melde dich an, um Daten zu speichern.");
-      return;
-    }
+  const handleSubmit = useCallback(
+    async (data: FormValues) => {
+      if (!userId) {
+        toast.error("Bitte melde dich an, um Daten zu speichern.");
+        return;
+      }
 
-    if (!data.heartRate && !data.respiratoryRate && !data.oxygenSaturation) {
-      return toast.error("Bitte gib mindestens einen Wert ein.");
-    }
+      if (!data.heartRate && !data.respiratoryRate && !data.oxygenSaturation) {
+        return toast.error("Bitte gib mindestens einen Wert ein.");
+      }
 
-    setIsSubmitting(true);
-    try {
-      const response = await fetch("/api/health", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          userId,
-          date: new Date().toISOString(),
-        }),
-      });
-      if (!response.ok) throw new Error("Fehler beim Speichern.");
-      toast.success("Vitaldaten gespeichert ✅");
-      mutate(`/api/health?userId=${userId}`);
-      form.reset({
-        heartRate: data.heartRate,
-        respiratoryRate: data.respiratoryRate,
-        oxygenSaturation: data.oxygenSaturation,
-      });
-    } catch (error) {
-      toast.error("Speichern fehlgeschlagen.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+      setIsSubmitting(true);
+      try {
+        const response = await fetch("/api/health", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...data,
+            userId,
+            date: new Date().toISOString(),
+          }),
+        });
+        if (!response.ok) throw new Error("Fehler beim Speichern.");
+        toast.success("Vitaldaten gespeichert ✅");
+        mutate(`/api/health?userId=${userId}`);
+        form.reset({
+          heartRate: data.heartRate,
+          respiratoryRate: data.respiratoryRate,
+          oxygenSaturation: data.oxygenSaturation,
+        });
+      } catch (error) {
+        toast.error("Speichern fehlgeschlagen.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [userId, form]
+  );
 
   const heartRate = form.watch("heartRate");
   const respiratoryRate = form.watch("respiratoryRate");
@@ -168,9 +171,7 @@ export default function VitalfunktionenPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold text-slate-50">
-        Vitalfunktionen
-      </h1>
+      <h1 className="text-3xl font-bold text-slate-50">Vitalfunktionen</h1>
 
       <Card className="border-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/90 shadow-xl shadow-purple-500/10">
         <CardHeader>
@@ -180,19 +181,15 @@ export default function VitalfunktionenPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-4"
-            >
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Herzfrequenz */}
                 <FormField
                   control={form.control}
                   name="heartRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
-                        Herzfrequenz (bpm)
-                      </FormLabel>
+                      <FormLabel className="text-xs text-slate-300">Herzfrequenz (bpm)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -211,14 +208,10 @@ export default function VitalfunktionenPage() {
                             size="sm"
                             variant="outline"
                             className={`rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400 ${
-                              heartRate === v
-                                ? "border-purple-500 text-purple-300"
-                                : ""
+                              heartRate === v ? "border-purple-500 text-purple-300" : ""
                             }`}
                             onClick={() =>
-                              form.setValue("heartRate", v, {
-                                shouldValidate: true,
-                              })
+                              form.setValue("heartRate", v, { shouldValidate: true })
                             }
                           >
                             {v} bpm
@@ -228,14 +221,13 @@ export default function VitalfunktionenPage() {
                     </FormItem>
                   )}
                 />
+                {/* Atemfrequenz */}
                 <FormField
                   control={form.control}
                   name="respiratoryRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
-                        Atemfrequenz (pro Min.)
-                      </FormLabel>
+                      <FormLabel className="text-xs text-slate-300">Atemfrequenz (pro Min.)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -254,14 +246,10 @@ export default function VitalfunktionenPage() {
                             size="sm"
                             variant="outline"
                             className={`rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400 ${
-                              respiratoryRate === v
-                                ? "border-purple-500 text-purple-300"
-                                : ""
+                              respiratoryRate === v ? "border-purple-500 text-purple-300" : ""
                             }`}
                             onClick={() =>
-                              form.setValue("respiratoryRate", v, {
-                                shouldValidate: true,
-                              })
+                              form.setValue("respiratoryRate", v, { shouldValidate: true })
                             }
                           >
                             {v}/min
@@ -271,14 +259,13 @@ export default function VitalfunktionenPage() {
                     </FormItem>
                   )}
                 />
+                {/* SpO2 */}
                 <FormField
                   control={form.control}
                   name="oxygenSaturation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
-                        Sauerstoffsättigung (%)
-                      </FormLabel>
+                      <FormLabel className="text-xs text-slate-300">Sauerstoffsättigung (%)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -297,14 +284,10 @@ export default function VitalfunktionenPage() {
                             size="sm"
                             variant="outline"
                             className={`rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400 ${
-                              oxygenSaturation === v
-                                ? "border-purple-500 text-purple-300"
-                                : ""
+                              oxygenSaturation === v ? "border-purple-500 text-purple-300" : ""
                             }`}
                             onClick={() =>
-                              form.setValue("oxygenSaturation", v, {
-                                shouldValidate: true,
-                              })
+                              form.setValue("oxygenSaturation", v, { shouldValidate: true })
                             }
                           >
                             {v} %
@@ -319,26 +302,12 @@ export default function VitalfunktionenPage() {
               <div className="flex items-center justify-between rounded-2xl bg-slate-900/70 px-4 py-3 text-xs text-slate-300">
                 <span>
                   Aktuelle Werte:{" "}
-                  {heartRate && (
-                    <span className="mr-3">
-                      ❤️ {heartRate} bpm
-                    </span>
+                  {heartRate && <span className="mr-3">❤️ {heartRate} bpm</span>}
+                  {respiratoryRate && <span className="mr-3">🌬️ {respiratoryRate}/min</span>}
+                  {oxygenSaturation && <span>🩸 {oxygenSaturation} %</span>}
+                  {!heartRate && !respiratoryRate && !oxygenSaturation && (
+                    <span className="text-slate-500">Noch keine Eingabe.</span>
                   )}
-                  {respiratoryRate && (
-                    <span className="mr-3">
-                      🌬️ {respiratoryRate}/min
-                    </span>
-                  )}
-                  {oxygenSaturation && (
-                    <span>🩸 {oxygenSaturation} %</span>
-                  )}
-                  {!heartRate &&
-                    !respiratoryRate &&
-                    !oxygenSaturation && (
-                      <span className="text-slate-500">
-                        Noch keine Eingabe.
-                      </span>
-                    )}
                 </span>
               </div>
 
@@ -347,9 +316,7 @@ export default function VitalfunktionenPage() {
                 disabled={isSubmitting || !userId}
                 className="w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
               >
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSubmitting ? "Speichern..." : "Messung speichern"}
               </Button>
             </form>
@@ -389,10 +356,7 @@ export default function VitalfunktionenPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-2 md:p-6">
-                  <HealthChart
-                    data={healthData}
-                    metrics={VITAL_METRICS}
-                  />
+                  <HealthChart data={healthData} metrics={VITAL_METRICS} />
                 </CardContent>
               </Card>
             </div>
@@ -403,10 +367,7 @@ export default function VitalfunktionenPage() {
                 <CardTitle>Alle Messwerte</CardTitle>
               </CardHeader>
               <CardContent>
-                <HealthDataTable
-                  data={filteredData}
-                  metrics={VITAL_METRICS}
-                />
+                <HealthDataTable data={filteredData} metrics={VITAL_METRICS} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -417,8 +378,7 @@ export default function VitalfunktionenPage() {
         <Card>
           <CardContent className="text-center py-8">
             <p className="text-muted-foreground">
-              Noch keine Vitaldaten vorhanden. Erfasse deine erste
-              Messung!
+              Noch keine Vitaldaten vorhanden. Erfasse deine erste Messung!
             </p>
           </CardContent>
         </Card>
@@ -429,12 +389,9 @@ export default function VitalfunktionenPage() {
           <CardContent className="text-center py-12">
             <div className="flex flex-col items-center gap-4">
               <LogIn className="h-12 w-12 text-slate-400" />
-              <h3 className="text-xl font-semibold">
-                Bitte melde dich an
-              </h3>
+              <h3 className="text-xl font-semibold">Bitte melde dich an</h3>
               <p className="text-muted-foreground">
-                Um deine Vitalfunktionen zu sehen und zu verwalten,
-                musst du angemeldet sein.
+                Um deine Vitalfunktionen zu sehen und zu verwalten, musst du angemeldet sein.
               </p>
               <Button asChild>
                 <Link href="/login">Zum Login</Link>
