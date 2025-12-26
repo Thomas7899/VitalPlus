@@ -26,7 +26,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Camera } from "lucide-react";
+import { ImageAnalyzer } from "./ImageAnalyzer";
 
 const PRESET_VALUES = {
   systolic: [100, 110, 120, 130, 140, 150, 160],
@@ -49,6 +50,7 @@ const swrKey = (userId: string) => `/api/health?userId=${userId}`;
 export function BloodPressureForm({ userId }: { userId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showImageAnalyzer, setShowImageAnalyzer] = useState(false);
 
   const now = new Date();
   const form = useForm<BloodPressureFormValues>({
@@ -62,6 +64,26 @@ export function BloodPressureForm({ userId }: { userId: string }) {
       notes: "",
     },
   });
+
+  // 📸 Callback für Foto-Analyse: Übernimmt erkannte Werte ins Formular
+  const handleImageAnalysisData = (data: {
+    type: string;
+    values: Record<string, number | string | undefined>;
+  }) => {
+    if (data.type === "blood_pressure") {
+      if (data.values.systolic) {
+        form.setValue("systolic", Number(data.values.systolic));
+      }
+      if (data.values.diastolic) {
+        form.setValue("diastolic", Number(data.values.diastolic));
+      }
+      if (data.values.pulse) {
+        form.setValue("pulse", Number(data.values.pulse));
+      }
+    }
+    setShowImageAnalyzer(false);
+    toast.success("Blutdruckwerte aus Foto übernommen! 📸");
+  };
 
   const watchedSystolic = form.watch("systolic");
   const watchedDiastolic = form.watch("diastolic");
@@ -112,11 +134,37 @@ export function BloodPressureForm({ userId }: { userId: string }) {
   return (
     <Card className="mb-6 border-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/90 shadow-xl shadow-purple-500/10">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-slate-50">
-          Blutdruck schnell erfassen
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold text-slate-50">
+            Blutdruck schnell erfassen
+          </CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowImageAnalyzer(!showImageAnalyzer)}
+            className={`gap-2 rounded-xl ${
+              showImageAnalyzer 
+                ? "bg-red-600 border-red-500 text-white hover:bg-red-700" 
+                : "bg-slate-800/50 border-slate-700 hover:bg-slate-700"
+            }`}
+          >
+            <Camera className="h-4 w-4" />
+            {showImageAnalyzer ? "Schließen" : "📸 Foto"}
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* 📸 Foto-Analyse Bereich */}
+        {showImageAnalyzer && (
+          <div className="animate-in slide-in-from-top-2 duration-300">
+            <ImageAnalyzer
+              defaultType="blood_pressure"
+              onDataExtracted={handleImageAnalysisData}
+            />
+          </div>
+        )}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">

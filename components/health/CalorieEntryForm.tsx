@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Camera, ChevronDown, ChevronUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { ImageAnalyzer } from "./ImageAnalyzer";
 
 const MEAL_TYPES = [
   { value: "Frühstück", label: "Frühstück", emoji: "🍳" },
@@ -58,6 +59,7 @@ interface CalorieEntryFormProps {
 export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showImageAnalyzer, setShowImageAnalyzer] = useState(false);
 
   const now = new Date();
   const form = useForm<CalorieFormValues>({
@@ -71,6 +73,38 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
       notes: "",
     },
   });
+
+  // 📸 Callback für Foto-Analyse: Übernimmt erkannte Werte ins Formular
+  const handleImageAnalysisData = (data: {
+    type: string;
+    values: Record<string, number | string | undefined>;
+  }) => {
+    if (data.type === "food") {
+      if (data.values.calories) {
+        form.setValue("calories", Number(data.values.calories));
+      }
+      if (data.values.mealType) {
+        const mealMapping: Record<string, "Frühstück" | "Mittagessen" | "Abendessen" | "Snacks"> = {
+          "Frühstück": "Frühstück",
+          "Mittagessen": "Mittagessen", 
+          "Abendessen": "Abendessen",
+          "Snacks": "Snacks",
+          "Breakfast": "Frühstück",
+          "Lunch": "Mittagessen",
+          "Dinner": "Abendessen",
+          "Snack": "Snacks",
+        };
+        const mappedMeal = mealMapping[String(data.values.mealType)] || "Snacks";
+        form.setValue("meal", mappedMeal);
+      }
+      if (data.values.notes) {
+        form.setValue("food", String(data.values.notes));
+        setShowDetails(true); // Zeige Details, damit der User das Essen sieht
+      }
+    }
+    setShowImageAnalyzer(false);
+    toast.success("Werte aus Foto übernommen! 📸");
+  };
 
   async function onSubmit(data: CalorieFormValues) {
     setIsSubmitting(true);
@@ -121,11 +155,37 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
   return (
     <Card className="mb-6 border-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/90 shadow-xl shadow-purple-500/10">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-slate-50">
-          Mahlzeit schnell eintragen
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold text-slate-50">
+            Mahlzeit schnell eintragen
+          </CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowImageAnalyzer(!showImageAnalyzer)}
+            className={`gap-2 rounded-xl ${
+              showImageAnalyzer 
+                ? "bg-purple-600 border-purple-500 text-white hover:bg-purple-700" 
+                : "bg-slate-800/50 border-slate-700 hover:bg-slate-700"
+            }`}
+          >
+            <Camera className="h-4 w-4" />
+            {showImageAnalyzer ? "Schließen" : "📸 Foto"}
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* 📸 Foto-Analyse Bereich */}
+        {showImageAnalyzer && userId && (
+          <div className="animate-in slide-in-from-top-2 duration-300">
+            <ImageAnalyzer
+              defaultType="food"
+              onDataExtracted={handleImageAnalysisData}
+            />
+          </div>
+        )}
+
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
