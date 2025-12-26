@@ -5,9 +5,20 @@ import { eq, and, gte, lte } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
+import { auth } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
+
+// 🔐 Authentifizierungsprüfung
+async function authenticateRequest() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Nicht authentifiziert", status: 401, userId: null };
+  }
+  return { error: null, status: 200, userId: session.user.id };
+}
 
 const healthSchema = z.object({
-  userId: z.string().min(1, "userId ist erforderlich"),
+  userId: z.string().min(1, "userId ist erforderlich").optional(), // Optional - wird aus Session genommen
   date: z.string().refine((val) => !isNaN(Date.parse(val)), { message: "Ungültiges Datum" }),
   steps: z.number().int().optional(),
   heartRate: z.number().int().optional(),
@@ -31,6 +42,12 @@ const healthSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // 🔐 Authentifizierung prüfen
+    const authResult = await authenticateRequest();
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const body = await req.json();
     const parseResult = healthSchema.safeParse(body);
 
@@ -42,11 +59,20 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parseResult.data;
+    
+    // 🔐 User kann nur eigene Daten speichern - userId aus Session verwenden
+    const targetUserId = data.userId || authResult.userId!;
+    if (data.userId && data.userId !== authResult.userId) {
+      return NextResponse.json(
+        { error: "Zugriff verweigert: Sie können nur eigene Daten speichern" },
+        { status: 403 }
+      );
+    }
 
     const [healthEntry] = await db
       .insert(healthData)
       .values({
-        userId: data.userId,
+        userId: targetUserId,
         date: new Date(data.date),
         steps: data.steps,
         heartRate: data.heartRate,
@@ -69,8 +95,11 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
+    // 🔄 Cache invalidieren für Dashboard-Stats
+    revalidateTag("health-data");
+
     // 🔄 Embedding im Hintergrund aktualisieren
-    updateHealthEmbeddingForUser(data.userId).catch((err) =>
+    updateHealthEmbeddingForUser(targetUserId).catch((err) =>
       console.warn("⚠️ Embedding-Update fehlgeschlagen:", err)
     );
 
@@ -83,20 +112,34 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    // 🔐 Authentifizierung prüfen
+    const authResult = await authenticateRequest();
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
+    const requestedUserId = searchParams.get("userId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
-    const conditions = [];
-    if (userId) conditions.push(eq(healthData.userId, userId));
+    // 🔐 User kann nur eigene Daten abrufen
+    const targetUserId = requestedUserId || authResult.userId!;
+    if (requestedUserId && requestedUserId !== authResult.userId) {
+      return NextResponse.json(
+        { error: "Zugriff verweigert: Sie können nur eigene Daten abrufen" },
+        { status: 403 }
+      );
+    }
+
+    const conditions = [eq(healthData.userId, targetUserId)];
     if (from) conditions.push(gte(healthData.date, new Date(from)));
     if (to) conditions.push(lte(healthData.date, new Date(to)));
 
     const data = await db
       .select()
       .from(healthData)
-      .where(conditions.length ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(healthData.date)
       .limit(2000);
 
