@@ -9,6 +9,7 @@ import { DashboardActivities } from "@/components/dashboard/DashboardActivities"
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { getDashboardStats } from "@/lib/data";
 import { AICockpit } from "@/components/dashboard/AICockpit";
+import { QuickEntry } from "@/components/health/QuickEntry";
 
 async function StatsData({ userId }: { userId: string }) {
   const statsData = await getDashboardStats(userId);
@@ -42,6 +43,9 @@ export default async function DashboardPage() {
       </div>
 
       <AICockpit userId={userId} />
+
+      {/* ⚡ Schnelleingabe für häufige Daten */}
+      <QuickEntry userId={userId} />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="glass-panel p-6 sm:p-8">

@@ -5,6 +5,7 @@ import { healthData } from "@/db/schema";
 import { eq, gte, asc, desc, and, sql } from "drizzle-orm";
 import { getHealthInsights } from "./health-insights";
 import type { DashboardTrendData } from "@/types/health";
+import { unstable_cache } from "next/cache";
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -51,9 +52,8 @@ function maxNumber(arr: (number | null | undefined)[]) {
   return vals.length ? Math.max(...vals) : null;
 }
 
-export async function getDashboardStats(
-  userId: string
-): Promise<DashboardStatsData> {
+// 📊 Interne Funktion für Dashboard Stats
+async function _getDashboardStats(userId: string): Promise<DashboardStatsData> {
   const todayAgg = await db.execute(sql`
     SELECT 
       COALESCE(MAX(steps), 0)::int AS steps,
@@ -87,6 +87,20 @@ export async function getDashboardStats(
     sleepChange: calculateChange(Number(t.sleep_hours), Number(y.sleep_hours)),
   };
 }
+
+/**
+ * 🚀 Gecachte Dashboard Stats
+ * - Cache für 60 Sekunden
+ * - Tag: health-data für Revalidation nach neuen Einträgen
+ */
+export const getDashboardStats = unstable_cache(
+  _getDashboardStats,
+  ["dashboard-stats"],
+  {
+    revalidate: 60, // 60 Sekunden Cache
+    tags: ["health-data"], // Ermöglicht manuelle Revalidation
+  }
+);
 
 export async function getDashboardActivities(userId: string) {
   const now = new Date();

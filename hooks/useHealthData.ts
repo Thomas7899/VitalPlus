@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+// hooks/useHealthData.ts
+import useSWR from "swr";
 
 export type HealthData = {
   id: string;
@@ -10,6 +11,8 @@ export type HealthData = {
   calories?: number;
   respiratoryRate?: number;
   bloodPressure?: string;
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
   bloodGroup?: string;
   bmi?: number;
   bodyTemp?: number;
@@ -18,42 +21,60 @@ export type HealthData = {
   elevation?: number;
   muscleMass?: number;
   bodyFat?: number;
+  mealType?: string;
   medications?: string;
 };
 
-export function useHealthData(userId: string | null, from?: string | null, to?: string | null) {
-  const [data, setData] = useState<HealthData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+const fetcher = async (url: string): Promise<HealthData[]> => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const error = new Error("Fehler beim Laden der Gesundheitsdaten");
+    throw error;
+  }
+  return res.json();
+};
 
-  useEffect(() => {
-    if (!userId) {
-      setData([]);
-      return;
+/**
+ * Hook für Gesundheitsdaten mit SWR (Stale-While-Revalidate)
+ * - Automatische Deduplication von Anfragen
+ * - Caching & Revalidation
+ * - Optimistische Updates möglich
+ */
+export function useHealthData(
+  userId: string | null | undefined,
+  from?: string | null,
+  to?: string | null
+) {
+  // Baue den API-Key nur wenn userId vorhanden
+  const params = new URLSearchParams();
+  if (userId) params.append("userId", userId);
+  if (from) params.append("from", from);
+  if (to) params.append("to", to);
+
+  const swrKey = userId ? `/api/health?${params.toString()}` : null;
+
+  const { data, error, isLoading, isValidating, mutate } = useSWR<HealthData[]>(
+    swrKey,
+    fetcher,
+    {
+      revalidateOnFocus: false, // Nicht bei Tab-Wechsel neu laden
+      revalidateOnReconnect: true, // Bei Reconnect neu laden
+      dedupingInterval: 5000, // 5s Dedupe
+      keepPreviousData: true, // Alte Daten behalten während Revalidation
     }
+  );
 
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const params = new URLSearchParams();
-        params.append("userId", userId);
-        if (from) params.append("from", from);
-        if (to) params.append("to", to);
-
-        const res = await fetch(`/api/health?${params.toString()}`);
-        const json = await res.json();
-        setData(json);
-      } catch (err: any) {
-        setError(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [userId, from, to]);
-
-  return { data, isLoading, error };
+  return {
+    data: data ?? [],
+    isLoading,
+    isValidating,
+    error,
+    mutate, // Für manuelle Revalidation/Optimistic Updates
+    swrKey, // Für externe mutate() Aufrufe
+  };
 }
+
+/**
+ * Helper: SWR Key für Health Data
+ */
+export const getHealthSwrKey = (userId: string) => `/api/health?userId=${userId}`;
