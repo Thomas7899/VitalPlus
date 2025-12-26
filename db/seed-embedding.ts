@@ -10,11 +10,12 @@ async function main() {
   console.log("🧠 Erzeuge HealthEmbedding...");
 
   const content = `
-John Doe, männlich, 30 Jahre, 1.79 m groß.
-Durchschnittlich 10.000 Schritte pro Tag,
-Herzfrequenz zwischen 60–80 bpm,
-Schlafdauer 6–8 Stunden,
-Gewicht ca. 72 kg.
+Max Müller, männlich, 30 Jahre, 1.79m groß.
+Aktivitätslevel: Aktiv mit regelmäßigem Training.
+Ziel: Muskelaufbau und Kraft steigern.
+Durchschnittlich ~10.000 Schritte/Tag, Puls 60–85 bpm,
+Schlafdauer ~6–8h, Gewicht ~75 kg.
+Trainiert 4x pro Woche Kraftsport.
   `;
 
   const embedding = await generateEmbedding(content);
