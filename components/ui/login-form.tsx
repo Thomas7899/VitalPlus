@@ -52,7 +52,7 @@ export default function LoginForm() {
                 name="email"
                 type="email"
                 required
-                placeholder="john.doe@example.com"
+                placeholder="max.mueller@example.com"
                 className="block w-full rounded-2xl border border-slate-700 bg-slate-900/60 py-2.5 pl-10 pr-3 text-sm text-slate-100 outline-none ring-0 transition focus:border-purple-400 focus:bg-slate-900 focus:shadow-[0_0_25px_rgba(168,85,247,0.35)]"
               />
             </div>
@@ -104,7 +104,7 @@ export default function LoginForm() {
         </div>
 
         <form action={formAction}>
-          <input type="hidden" name="email" value="john.doe@example.com" />
+          <input type="hidden" name="email" value="max.mueller@example.com" />
           <input type="hidden" name="password" value="password123" />
           <input type="hidden" name="redirectTo" value={callbackUrl} />
           <Button

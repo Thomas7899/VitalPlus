@@ -7,18 +7,23 @@ import { db } from "./client";
 import { users, healthEmbeddings } from "./schema";
 import { eq } from "drizzle-orm";
 import { generateEmbedding } from "../lib/embeddings";
+import bcrypt from "bcryptjs";
 
 const userId = "2fbb9c24-cdf8-49db-9b74-0762017445a1";
 
 async function main() {
   console.log("🔄 Aktualisiere Benutzer...");
 
-  // 1. User-Daten aktualisieren
+  // Passwort hashen
+  const hashedPassword = await bcrypt.hash("password123", 10);
+
+  // 1. User-Daten aktualisieren (inkl. Passwort)
   await db
     .update(users)
     .set({
       name: "Max Müller",
       email: "max.mueller@example.com",
+      password: hashedPassword,
       activityLevel: "active",
       healthGoal: "muskelaufbau",
       targetWeight: 78,
