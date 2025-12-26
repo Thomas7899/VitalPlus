@@ -2,14 +2,16 @@
 
 import { signIn } from '@/lib/auth';
 import { AuthError } from 'next-auth';
-import { redirect } from 'next/navigation';
 
 export async function authenticate(prevState: string | undefined, formData: FormData) {
+  const redirectTo = formData.get('redirectTo')?.toString() || '/';
+  
   try {
-    await signIn('credentials', formData);
-
-    const redirectTo = formData.get('redirectTo')?.toString() || '/';
-    redirect(redirectTo);
+    await signIn('credentials', {
+      email: formData.get('email'),
+      password: formData.get('password'),
+      redirectTo,
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {
@@ -19,6 +21,7 @@ export async function authenticate(prevState: string | undefined, formData: Form
           return 'Something went wrong.';
       }
     }
+    // NEXT_REDIRECT ist kein echter Fehler - weiterwerfen für Redirect
     throw error;
   }
 }

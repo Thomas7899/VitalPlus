@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import { SessionProvider } from "next-auth/react";
-import { auth } from "@/lib/auth";
 import { ThemeProvider } from "@/components/theme-provider"; 
 
 export const metadata: Metadata = {
@@ -16,13 +15,14 @@ export const viewport = {
   themeColor: "#3B82F6",
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+// Kein Caching für das Layout - Session muss immer aktuell sein
+export const dynamic = "force-dynamic";
 
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" className="h-full" suppressHydrationWarning> 
       <body className="antialiased h-full flex flex-col bg-background text-foreground overflow-hidden transition-colors duration-300">
-        <SessionProvider session={session}>
+        <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
