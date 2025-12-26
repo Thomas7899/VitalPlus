@@ -21,12 +21,22 @@ async function main() {
 
   await db.insert(users).values({
     id: userId,
-    email: "john.doe@example.com",
-    name: "John Doe",
+    email: "max.mueller@example.com",
+    name: "Max Müller",
     height: 1.79,
     gender: "männlich",
     dateOfBirth: new Date("1995-01-01"),
     password: hashedPassword,
+    // 🆕 Profil-Erweiterungen für Personalisierung
+    activityLevel: "active", // sedentary, normal, active, athlete
+    healthGoal: "muskelaufbau", // abnehmen, zunehmen, muskelaufbau, gesund_bleiben
+    targetWeight: 78,
+    customAlertThresholds: {
+      maxHeartRate: 95, // Als aktiver Sportler höhere Toleranz
+      minHeartRate: 45,
+      minSteps: 8000, // Höhere Bewegungserwartung
+      maxCalories: 3000, // Mehr Kalorien für Muskelaufbau
+    },
   });
 
   const year = 2025;
@@ -81,9 +91,12 @@ async function main() {
 
   // Embedding-Zusammenfassung generieren + upserten
   const content = `
-John Doe, männlich, 30 Jahre, 1.79m groß.
+Max Müller, männlich, 30 Jahre, 1.79m groß.
+Aktivitätslevel: Aktiv mit regelmäßigem Training.
+Ziel: Muskelaufbau und Kraft steigern.
 Durchschnittlich ~10.000 Schritte/Tag, Puls 60–85 bpm,
-Schlafdauer ~6–8h, Gewicht ~72 kg.`;
+Schlafdauer ~6–8h, Gewicht ~75 kg.
+Trainiert 4x pro Woche Kraftsport.`;
   const embedding = await generateEmbedding(content);
 
   await db

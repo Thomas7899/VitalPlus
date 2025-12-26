@@ -20,20 +20,22 @@ export function HealthAlerts({ userId }: { userId: string }) {
     if (!userId || isPending) return;
     setLoading(true);
     try {
-      await startTransition(async () => {
-        const res = await fetch("/api/health/alert", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Fehler beim Laden der Alerts");
+      const res = await fetch("/api/health/alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Fehler beim Laden der Alerts");
+      startTransition(() => {
         setAlerts(data.alerts || []);
         setRecommendation(data.recommendation || null);
       });
     } catch (error) {
       console.error(error);
-      setAlerts(["⚠️ Gesundheitsdaten konnten nicht analysiert werden."]);
+      startTransition(() => {
+        setAlerts(["⚠️ Gesundheitsdaten konnten nicht analysiert werden."]);
+      });
     } finally {
       setLoading(false);
       setChecked(true);

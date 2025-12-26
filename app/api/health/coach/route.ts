@@ -2,22 +2,59 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { db } from "@/db/client";
-import { healthData, healthEmbeddings } from "@/db/schema";
+import { healthData, healthEmbeddings, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
+import { generateCoachAnalysisPrompt, HEALTH_COACH_SYSTEM_PROMPT } from "@/lib/prompts";
+import { getCachedResponse, setCachedResponse } from "@/lib/cache";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
-export const maxDuration = 60; // ⏱️ Erhöht Timeout auf 60s
+export const maxDuration = 60;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: Request) {
   try {
-    const { userId, goal = "Gesund bleiben" } = await req.json();
+    const { userId, goal: providedGoal, skipCache = false } = await req.json();
 
     if (!userId) {
       return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
     }
+
+    // Rate-Limiting prüfen
+    const rateLimit = checkRateLimit(userId, "ai:coach");
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { 
+          error: "Zu viele Anfragen. Bitte warte einen Moment.",
+          retryAfter: Math.ceil((rateLimit.retryAfterMs || 60000) / 1000),
+        },
+        { status: 429 }
+      );
+    }
+
+    // Cache prüfen
+    if (!skipCache) {
+      const cached = await getCachedResponse<{ sections: any[] }>(userId, "coach_analysis");
+      if (cached) {
+        return NextResponse.json({ ...cached, fromCache: true });
+      }
+    }
+
+    // Benutzerprofil laden für personalisiertes Ziel
+    const userProfile = await db
+      .select({
+        name: users.name,
+        healthGoal: users.healthGoal,
+        activityLevel: users.activityLevel,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    const goal = providedGoal || mapHealthGoalToText(userProfile?.healthGoal, userProfile?.activityLevel);
 
     // ⏳ Embedding-Update parallelisieren
     const embeddingPromise = updateHealthEmbeddingForUser(userId);
@@ -35,7 +72,7 @@ export async function POST(req: Request) {
         .from(healthEmbeddings)
         .where(eq(healthEmbeddings.userId, userId))
         .limit(1),
-      embeddingPromise, // ⏱️ wird im Hintergrund fertig
+      embeddingPromise,
     ]);
 
     if (recent.length === 0) {
@@ -57,7 +94,9 @@ export async function POST(req: Request) {
         )
         .join("\n");
 
-    // 🧠 OpenAI-Analyse
+    // 🧠 OpenAI-Analyse mit zentralisiertem Prompt
+    const userPrompt = generateCoachAnalysisPrompt(summary, goal);
+    
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
@@ -65,21 +104,11 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: `
-Du bist ein digitaler Gesundheitscoach. Analysiere die Gesundheitsdaten
-und gib deine Antwort IMMER als valides JSON-Objekt zurück.
-
-Das Objekt soll so aussehen:
-{
-  "sections": [
-    { "title": string, "content": string, "type": "summary" | "warning" | "nutrition" | "training" | "sleep" | "info" }
-  ]
-}
-          `,
+          content: HEALTH_COACH_SYSTEM_PROMPT,
         },
         {
           role: "user",
-          content: `Hier sind die Gesundheitsdaten:\n${summary}\n\nZiel des Nutzers: ${goal}`,
+          content: userPrompt,
         },
       ],
     });
@@ -97,9 +126,36 @@ Das Objekt soll so aussehen:
       parsedJson = { sections: [{ title: "Fehler", content, type: "info" }] };
     }
 
+    // Ergebnis cachen
+    await setCachedResponse(userId, "coach_analysis", parsedJson);
+
     return NextResponse.json(parsedJson, { status: 200 });
   } catch (error) {
     console.error("💥 Coach-Fehler:", error);
     return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
+}
+
+function mapHealthGoalToText(
+  healthGoal: string | null | undefined,
+  activityLevel: string | null | undefined
+): string {
+  const goalTexts: Record<string, string> = {
+    abnehmen: "Gewicht reduzieren",
+    zunehmen: "Gesund zunehmen",
+    muskelaufbau: "Muskeln aufbauen",
+    gesund_bleiben: "Gesund und fit bleiben",
+  };
+
+  const activityTexts: Record<string, string> = {
+    sedentary: "mit wenig Bewegung",
+    normal: "mit moderater Aktivität",
+    active: "mit regelmäßigem Training",
+    athlete: "als Leistungssportler",
+  };
+
+  const goalText = goalTexts[healthGoal || "gesund_bleiben"] || "Gesund bleiben";
+  const activityText = activityTexts[activityLevel || "normal"] || "";
+
+  return activityText ? `${goalText} ${activityText}` : goalText;
 }
