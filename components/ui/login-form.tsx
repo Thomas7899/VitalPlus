@@ -1,9 +1,9 @@
 // components/ui/login-form.tsx
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { useActionState } from "react";
-import { authenticate } from "@/lib/actions";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { lusitana } from "@/components/ui/fonts";
 import { Button } from "./button";
 import {
@@ -15,11 +15,36 @@ import { ArrowRightIcon } from "@heroicons/react/20/solid";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
-  const [errorMessage, formAction, isPending] = useActionState(
-    authenticate,
-    undefined
-  );
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [isPending, setIsPending] = useState(false);
+
+  async function handleSubmit(formData: FormData) {
+    setIsPending(true);
+    setErrorMessage(undefined);
+    
+    try {
+      const result = await signIn("credentials", {
+        email: formData.get("email"),
+        password: formData.get("password"),
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setErrorMessage("Ungültige Anmeldedaten.");
+        setIsPending(false);
+        return;
+      }
+
+      // Erfolgreicher Login - Redirect mit Router (Client-seitig)
+      router.push(callbackUrl);
+      router.refresh(); // Wichtig: Aktualisiert Server Components und Session
+    } catch {
+      setErrorMessage("Ein Fehler ist aufgetreten.");
+      setIsPending(false);
+    }
+  }
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 px-4">
@@ -35,7 +60,7 @@ export default function LoginForm() {
           </p>
         </div>
 
-        <form action={formAction} className="space-y-5">
+        <form action={handleSubmit} className="space-y-5">
           <div>
             <label
               className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-300"
@@ -85,7 +110,7 @@ export default function LoginForm() {
 
           <Button
             className="mt-2 w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
-            aria-disabled={isPending}
+            disabled={isPending}
           >
             Einloggen
             <ArrowRightIcon className="ml-auto h-4 w-4 text-slate-50" />
@@ -103,14 +128,13 @@ export default function LoginForm() {
           </div>
         </div>
 
-        <form action={formAction}>
+        <form action={handleSubmit}>
           <input type="hidden" name="email" value="max.mueller@example.com" />
           <input type="hidden" name="password" value="password123" />
-          <input type="hidden" name="redirectTo" value={callbackUrl} />
           <Button
             variant="outline"
             className="w-full rounded-2xl border-slate-700 bg-slate-900/60 text-sm font-medium text-slate-100 hover:border-purple-400 hover:bg-slate-900"
-            aria-disabled={isPending}
+            disabled={isPending}
           >
             Demo‑Login (1‑Klick)
           </Button>

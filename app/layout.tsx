@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de" className="h-full" suppressHydrationWarning> 
       <body className="antialiased h-full flex flex-col bg-background text-foreground overflow-hidden transition-colors duration-300">
-        <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>
+        <SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={true} basePath="/api/auth">
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
