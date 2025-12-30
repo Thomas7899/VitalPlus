@@ -3,17 +3,36 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Activity, Utensils, Heart, Moon, ChevronDown, ChevronUp } from "lucide-react";
+import { Activity, Utensils, Heart, Moon, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import type { DashboardActivityData } from "@/lib/data";
 
 const activityIcons = {
-  BLOOD_PRESSURE: { icon: Heart, bg: "bg-red-50", iconBg: "bg-red-100", text: "text-red-600" },
-  MEAL: { icon: Utensils, bg: "bg-orange-50", iconBg: "bg-orange-100", text: "text-orange-600" },
-  WORKOUT: { icon: Activity, bg: "bg-blue-50", iconBg: "bg-blue-100", text: "text-blue-600" },
-  SLEEP_WARNING: { icon: Moon, bg: "bg-purple-50", iconBg: "bg-purple-100", text: "text-purple-600" },
-  DEFAULT: { icon: Activity, bg: "bg-gray-50", iconBg: "bg-gray-100", text: "text-gray-600" },
+  BLOOD_PRESSURE: { 
+    icon: Heart, 
+    iconBg: "bg-red-500/20 dark:bg-red-400/20", 
+    iconColor: "text-red-600 dark:text-red-400" 
+  },
+  MEAL: { 
+    icon: Utensils, 
+    iconBg: "bg-orange-500/20 dark:bg-orange-400/20", 
+    iconColor: "text-orange-600 dark:text-orange-400" 
+  },
+  WORKOUT: { 
+    icon: Activity, 
+    iconBg: "bg-blue-500/20 dark:bg-blue-400/20", 
+    iconColor: "text-blue-600 dark:text-blue-400" 
+  },
+  SLEEP_WARNING: { 
+    icon: Moon, 
+    iconBg: "bg-purple-500/20 dark:bg-purple-400/20", 
+    iconColor: "text-purple-600 dark:text-purple-400" 
+  },
+  DEFAULT: { 
+    icon: Activity, 
+    iconBg: "bg-slate-500/20 dark:bg-slate-400/20", 
+    iconColor: "text-slate-600 dark:text-slate-400" 
+  },
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -33,88 +52,78 @@ export function DashboardActivities({ userId }: { userId: string }) {
 
   if (error)
     return (
-      <Card className="border-0 shadow-lg shadow-slate-200/50 bg-white/70 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center text-slate-800">
-            <Calendar className="mr-2 h-5 w-5" />
-            Letzte Aktivitäten
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-red-600">❌ Fehler beim Laden der Aktivitäten</p>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-8 text-red-500 dark:text-red-400">
+        <p>Fehler beim Laden der Aktivitäten</p>
+      </div>
+    );
+
+  if (isLoading)
+    return (
+      <div className="flex items-center justify-center py-8 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        <p>Lade Aktivitäten...</p>
+      </div>
+    );
+
+  if (!activities || activities.length === 0)
+    return (
+      <div className="flex items-center justify-center py-8 text-muted-foreground">
+        <p>Noch keine Aktivitäten erfasst.</p>
+      </div>
     );
 
   return (
-    <Card className="border-0 shadow-lg shadow-slate-200/50 bg-white/70 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center text-slate-800">
-          <Calendar className="mr-2 h-5 w-5" />
-          Letzte Aktivitäten
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <p className="text-slate-600">Lade Aktivitäten...</p>
-        ) : activities && activities.length > 0 ? (
-          <div className="space-y-4">
-            <AnimatePresence>
-              {(showAll ? activities : activities.slice(0, 3)).map((activity) => {
-                const config =
-                  activityIcons[activity.type as keyof typeof activityIcons] ||
-                  activityIcons.DEFAULT;
-                const Icon = config.icon;
+    <div className="space-y-3">
+      <AnimatePresence>
+        {(showAll ? activities : activities.slice(0, 3)).map((activity) => {
+          const config =
+            activityIcons[activity.type as keyof typeof activityIcons] ||
+            activityIcons.DEFAULT;
+          const Icon = config.icon;
 
-                return (
-                  <motion.div
-                    key={activity.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className={`flex items-center space-x-4 p-4 ${config.bg} rounded-xl transition hover:scale-[1.01]`}
-                  >
-                    <div
-                      className={`w-10 h-10 ${config.iconBg} rounded-lg flex items-center justify-center`}
-                    >
-                      <Icon className={`h-5 w-5 ${config.text}`} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-800">{activity.title}</p>
-                      <p className="text-sm text-slate-600">
-                        {activity.description} – {activity.timeAgo}
-                      </p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-
-            {activities.length > 3 && (
-              <div className="flex justify-center pt-2">
-                <Button
-                  variant="ghost"
-                  className="text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition"
-                  onClick={() => setShowAll(!showAll)}
-                >
-                  {showAll ? (
-                    <>
-                      Weniger anzeigen <ChevronUp className="ml-2 h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      Mehr anzeigen <ChevronDown className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
+          return (
+            <motion.div
+              key={activity.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center gap-4 p-4 rounded-xl 
+                        bg-white/50 dark:bg-slate-800/50 
+                        border border-slate-200/60 dark:border-slate-700/50
+                        hover:bg-white/80 dark:hover:bg-slate-800/80
+                        transition-all"
+            >
+              <div className={`w-10 h-10 ${config.iconBg} rounded-xl flex items-center justify-center`}>
+                <Icon className={`h-5 w-5 ${config.iconColor}`} />
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-foreground truncate">{activity.title}</p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {activity.description} – {activity.timeAgo}
+                </p>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+
+      {activities.length > 3 && (
+        <div className="flex justify-center pt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => setShowAll(!showAll)}
+          >
+            {showAll ? (
+              <>Weniger anzeigen <ChevronUp className="ml-1 h-4 w-4" /></>
+            ) : (
+              <>Mehr anzeigen <ChevronDown className="ml-1 h-4 w-4" /></>
             )}
-          </div>
-        ) : (
-          <p className="text-slate-600">Noch keine Aktivitäten erfasst.</p>
-        )}
-      </CardContent>
-    </Card>
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

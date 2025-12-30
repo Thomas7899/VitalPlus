@@ -10,6 +10,7 @@ import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { getDashboardStats } from "@/lib/data";
 import { AICockpit } from "@/components/dashboard/AICockpit";
 import { QuickEntry } from "@/components/health/QuickEntry";
+import { Calendar, Zap } from "lucide-react";
 
 async function StatsData({ userId }: { userId: string }) {
   const statsData = await getDashboardStats(userId);
@@ -33,28 +34,37 @@ export default async function DashboardPage() {
   if (!userId) redirect("/login");
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-10 px-4 pb-12 pt-6">
+    <div className="container mx-auto max-w-6xl space-y-8 px-4 pb-12 pt-6">
       <DashboardHeader />
 
-      <div className="surface-panel p-6 sm:p-8">
+      {/* Stats Section */}
+      <section className="surface-panel p-5 sm:p-6">
         <Suspense fallback={<DashboardSkeleton />}>
           <StatsData userId={userId} />
         </Suspense>
-      </div>
+      </section>
 
+      {/* KI Command Hub */}
       <AICockpit userId={userId} />
 
-      {/* ⚡ Schnelleingabe für häufige Daten */}
+      {/* Schnelleingabe */}
       <QuickEntry userId={userId} />
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <section className="glass-panel p-6 sm:p-8">
-          <h2 className="section-title">Letzte Aktivitäten</h2>
+      {/* Bottom Grid: Aktivitäten & Schnellzugriffe */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="surface-panel p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar className="h-5 w-5 text-primary/70" />
+            <h2 className="text-lg font-semibold text-foreground">Letzte Aktivitäten</h2>
+          </div>
           <DashboardActivities userId={userId} />
         </section>
 
-        <section className="glass-panel p-6 sm:p-8">
-          <h2 className="section-title">Schnellzugriffe</h2>
+        <section className="surface-panel p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="h-5 w-5 text-primary/70" />
+            <h2 className="text-lg font-semibold text-foreground">Schnellzugriff</h2>
+          </div>
           <DashboardQuickActions />
         </section>
       </div>
