@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, Brain, Dumbbell, Salad, Moon } from "lucide-react";
+import { AlertTriangle, Brain, Dumbbell, Salad, Moon, Sparkles, RefreshCw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -51,31 +51,31 @@ export function HealthInsights({ userId }: { userId: string }) {
 
         const parsed: Section[] = apiSections.map((s) => {
           let icon: React.ReactNode | undefined;
-          let className: string = "border-l-gray-400";
+          let className: string = "border-l-slate-300 dark:border-l-slate-600";
 
           switch (s.type) {
             case "summary":
-              icon = <Brain className="text-blue-500" />;
-              className = "border-l-blue-500";
+              icon = <Brain className="text-purple-500" />;
+              className = "border-l-purple-500 bg-purple-50/50 dark:bg-purple-950/20";
               break;
             case "warning":
-              icon = <AlertTriangle className="text-yellow-500" />;
-              className = "border-l-yellow-500 bg-yellow-50/40 dark:bg-yellow-950/30";
+              icon = <AlertTriangle className="text-amber-500" />;
+              className = "border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20";
               break;
             case "training":
-              icon = <Dumbbell className="text-red-500" />;
-              className = "border-l-red-500 bg-red-50/40 dark:bg-red-950/30";
+              icon = <Dumbbell className="text-rose-500" />;
+              className = "border-l-rose-500 bg-rose-50/50 dark:bg-rose-950/20";
               break;
             case "nutrition":
-              icon = <Salad className="text-green-500" />;
-              className = "border-l-green-500 bg-green-50/40 dark:bg-green-950/30";
+              icon = <Salad className="text-emerald-500" />;
+              className = "border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20";
               break;
             case "sleep":
               icon = <Moon className="text-indigo-500" />;
-              className = "border-l-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/30";
+              className = "border-l-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20";
               break;
             default:
-              className = "border-l-gray-400";
+              className = "border-l-slate-300 dark:border-l-slate-600";
           }
 
           return { ...s, icon, className };
@@ -116,13 +116,31 @@ export function HealthInsights({ userId }: { userId: string }) {
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-semibold flex items-center gap-2">
-        <span>KI-Gesundheitsanalyse</span>
-      </h2>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/25">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">KI-Gesundheitsanalyse</h2>
+            <p className="text-sm text-muted-foreground">Personalisierte Empfehlungen basierend auf deinen Daten</p>
+          </div>
+        </div>
+      </div>
 
       {loading ? (
-        <p className="text-muted-foreground">Lade Gesundheitsanalyse...</p>
+        <div className="flex items-center gap-3 p-6 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/50 dark:border-purple-500/20">
+          <div className="flex gap-1">
+            <span className="loading-dot w-2 h-2 rounded-full bg-purple-500"></span>
+            <span className="loading-dot w-2 h-2 rounded-full bg-purple-500"></span>
+            <span className="loading-dot w-2 h-2 rounded-full bg-purple-500"></span>
+          </div>
+          <span className="text-sm text-purple-600 dark:text-purple-400 font-medium">
+            KI analysiert deine Gesundheitsdaten...
+          </span>
+        </div>
       ) : (
         <>
           {summary && (
@@ -130,10 +148,12 @@ export function HealthInsights({ userId }: { userId: string }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <Card className={cn("border-l-4", summary.className)}>
-                <CardHeader className="flex flex-row items-center gap-2">
-                  {summary.icon}
-                  <CardTitle>{summary.title}</CardTitle>
+              <Card className={cn("border-l-4 shadow-sm hover:shadow-md transition-shadow", summary.className)}>
+                <CardHeader className="flex flex-row items-center gap-3 pb-2">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-500/20">
+                    {summary.icon}
+                  </div>
+                  <CardTitle className="text-base">{summary.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
                   <ReactMarkdown {...markdownPlugins}>
@@ -149,10 +169,12 @@ export function HealthInsights({ userId }: { userId: string }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <Card className="border-l-4 border-l-yellow-500 bg-yellow-50/40 dark:bg-yellow-950/30">
-                <CardHeader className="flex flex-row items-center gap-2">
-                  <AlertTriangle className="text-yellow-500" />
-                  <CardTitle>Wichtige Hinweise</CardTitle>
+              <Card className="border-l-4 border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20 shadow-sm">
+                <CardHeader className="flex flex-row items-center gap-3 pb-2">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-500/20">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  </div>
+                  <CardTitle className="text-base">Wichtige Hinweise</CardTitle>
                 </CardHeader>
                 <CardContent className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
                   {warnings.map((w, i) => (
@@ -172,18 +194,20 @@ export function HealthInsights({ userId }: { userId: string }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 15 }}
                 transition={{ duration: 0.3 }}
-                className="grid gap-6 md:grid-cols-2"
+                className="grid gap-4 md:grid-cols-2"
               >
                 {rest.map((s, i) => (
                   <Card
                     key={i}
                     className={cn(
-                      "border-l-4 hover:shadow-lg transition-shadow duration-200",
+                      "border-l-4 shadow-sm hover:shadow-md transition-all duration-200",
                       s.className
                     )}
                   >
-                    <CardHeader className="flex flex-row items-center gap-2">
-                      {s.icon}
+                    <CardHeader className="flex flex-row items-center gap-3 pb-2">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/60 dark:bg-slate-800/60">
+                        {s.icon}
+                      </div>
                       <CardTitle className="text-base">{s.title}</CardTitle>
                     </CardHeader>
                     <CardContent className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
@@ -201,8 +225,9 @@ export function HealthInsights({ userId }: { userId: string }) {
             <Button
               variant="outline"
               onClick={() => setExpanded(!expanded)}
-              className="text-sm"
+              className="text-sm gap-2 rounded-xl border-purple-200/50 dark:border-purple-500/20 hover:bg-purple-50 dark:hover:bg-purple-950/30"
             >
+              <RefreshCw className="h-4 w-4" />
               {expanded
                 ? "Details ausblenden"
                 : "Details und Empfehlungen anzeigen"}
