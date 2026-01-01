@@ -140,11 +140,11 @@ export default function RegenerationPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold text-slate-50">Regeneration</h1>
+      <h1 className="text-3xl font-bold text-foreground">Regeneration</h1>
 
-      <Card className="border-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/90 shadow-xl shadow-purple-500/10">
+      <Card className="border border-border/50 bg-card/80 dark:bg-gradient-to-br dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-900/90 shadow-xl shadow-indigo-500/5 dark:shadow-purple-500/10 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-lg text-slate-50">
+          <CardTitle className="text-lg text-foreground">
             Schlaf erfassen
           </CardTitle>
         </CardHeader>
@@ -159,7 +159,7 @@ export default function RegenerationPage() {
                 name="sleepHours"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs text-slate-300">
+                    <FormLabel className="text-xs text-muted-foreground">
                       Schlafdauer (Stunden)
                     </FormLabel>
                     <FormControl>
@@ -168,7 +168,7 @@ export default function RegenerationPage() {
                         step="0.5"
                         inputMode="decimal"
                         placeholder="z.B. 7.5"
-                        className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                        className="rounded-2xl bg-secondary/50 border-border text-foreground"
                         {...field}
                       />
                     </FormControl>
@@ -180,9 +180,9 @@ export default function RegenerationPage() {
                           type="button"
                           size="sm"
                           variant="outline"
-                          className={`rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400 ${
+                          className={`rounded-full border-border bg-secondary/50 text-xs text-foreground hover:border-purple-400 ${
                             currentSleep === v
-                              ? "border-purple-500 text-purple-300"
+                              ? "border-purple-500 text-purple-600 dark:text-purple-300"
                               : ""
                           }`}
                           onClick={() =>
@@ -199,7 +199,7 @@ export default function RegenerationPage() {
                 )}
               />
 
-              <div className="flex items-center justify-between rounded-2xl bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
+              <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-4 py-3 text-sm text-foreground">
                 <span>
                   Aktuelle Eingabe:{" "}
                   {currentSleep ? (
@@ -207,12 +207,12 @@ export default function RegenerationPage() {
                       {currentSleep.toString().replace(".", ",")} h Schlaf
                     </span>
                   ) : (
-                    <span className="text-slate-500">
+                    <span className="text-muted-foreground">
                       Noch keine Eingabe.
                     </span>
                   )}
                   {lastEntry && (
-                    <span className="ml-2 text-xs text-slate-400">
+                    <span className="ml-2 text-xs text-muted-foreground">
                       (letzte Messung: {lastEntry.sleepHours} h)
                     </span>
                   )}
@@ -222,7 +222,7 @@ export default function RegenerationPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting || !userId}
-                className="w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
+                className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-violet-500 text-sm font-semibold text-white shadow-[0_10px_40px_rgba(99,102,241,0.35)] hover:brightness-110"
               >
                 {isSubmitting && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -237,7 +237,7 @@ export default function RegenerationPage() {
       {isLoading && (
         <div className="flex justify-center items-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-          <p className="ml-2 text-slate-300">Lade Daten...</p>
+          <p className="ml-2 text-muted-foreground">Lade Daten...</p>
         </div>
       )}
 

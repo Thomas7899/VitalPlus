@@ -153,10 +153,10 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
   const calories = form.watch("calories");
 
   return (
-    <Card className="mb-6 border-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/90 shadow-xl shadow-purple-500/10">
+    <Card className="mb-6 border border-border/50 bg-card/80 dark:bg-gradient-to-br dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-900/90 shadow-xl shadow-orange-500/5 dark:shadow-purple-500/10 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-slate-50">
+          <CardTitle className="text-lg font-semibold text-foreground">
             Mahlzeit schnell eintragen
           </CardTitle>
           <Button
@@ -167,7 +167,7 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
             className={`gap-2 rounded-xl ${
               showImageAnalyzer 
                 ? "bg-purple-600 border-purple-500 text-white hover:bg-purple-700" 
-                : "bg-slate-800/50 border-slate-700 hover:bg-slate-700"
+                : "bg-secondary/50 border-border hover:bg-secondary"
             }`}
           >
             <Camera className="h-4 w-4" />
@@ -198,7 +198,7 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
                 name="meal"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs text-slate-300">
+                    <FormLabel className="text-xs text-muted-foreground">
                       Mahlzeit
                     </FormLabel>
                     <Select
@@ -206,7 +206,7 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
                       value={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50">
+                        <SelectTrigger className="rounded-2xl bg-secondary/50 border-border text-foreground">
                           <SelectValue placeholder="Mahlzeit wählen" />
                         </SelectTrigger>
                       </FormControl>
@@ -229,14 +229,14 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
                   name="calories"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Portion (kcal)
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           inputMode="numeric"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -251,8 +251,8 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
                       type="button"
                       variant="outline"
                       size="sm"
-                      className={`rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400 ${
-                        calories === p.kcal ? "border-purple-500 text-purple-300" : ""
+                      className={`rounded-full border-border bg-secondary/50 text-xs text-foreground hover:border-purple-400 ${
+                        calories === p.kcal ? "border-purple-500 text-purple-600 dark:text-purple-300" : ""
                       }`}
                       onClick={() => form.setValue("calories", p.kcal)}
                     >
@@ -267,7 +267,7 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
             <button
               type="button"
               onClick={() => setShowDetails((v) => !v)}
-              className="text-xs text-slate-400 underline-offset-2 hover:underline"
+              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
             >
               {showDetails
                 ? "Details ausblenden"
@@ -281,13 +281,13 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
                   name="food"
                   render={({ field }) => (
                     <FormItem className="lg:col-span-2">
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Lebensmittel (optional)
                       </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="z.B. Hähnchen mit Reis"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -300,13 +300,13 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
                   name="date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Datum
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="date"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -319,13 +319,13 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
                   name="time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Zeit
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="time"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -338,13 +338,13 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
                   name="notes"
                   render={({ field }) => (
                     <FormItem className="lg:col-span-2">
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Notizen (optional)
                       </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="z.B. große Portion, Auswärts essen..."
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -355,16 +355,16 @@ export function CalorieEntryForm({ userId, onEntrySaved }: CalorieEntryFormProps
               </div>
             )}
 
-            <div className="flex items-center justify-between rounded-2xl bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-4 py-3 text-sm text-foreground">
               <span>
                 {calories.toLocaleString("de-DE")} kcal{" "}
-                <span className="text-slate-400">für diese Mahlzeit</span>
+                <span className="text-muted-foreground">für diese Mahlzeit</span>
               </span>
             </div>
 
             <Button
               type="submit"
-              className="w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
+              className="w-full rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-sm font-semibold text-white shadow-[0_10px_40px_rgba(251,146,60,0.35)] hover:brightness-110"
               disabled={isSubmitting || !userId}
             >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
