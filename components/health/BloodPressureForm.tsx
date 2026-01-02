@@ -132,10 +132,10 @@ export function BloodPressureForm({ userId }: { userId: string }) {
   }
 
   return (
-    <Card className="mb-6 border-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/90 shadow-xl shadow-purple-500/10">
+    <Card className="mb-6 border border-border/50 bg-card/80 dark:bg-gradient-to-br dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-900/90 shadow-xl shadow-purple-500/5 dark:shadow-purple-500/10 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-slate-50">
+          <CardTitle className="text-lg font-semibold text-foreground">
             Blutdruck schnell erfassen
           </CardTitle>
           <Button
@@ -146,7 +146,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
             className={`gap-2 rounded-xl ${
               showImageAnalyzer 
                 ? "bg-red-600 border-red-500 text-white hover:bg-red-700" 
-                : "bg-slate-800/50 border-slate-700 hover:bg-slate-700"
+                : "bg-secondary/50 border-border hover:bg-secondary"
             }`}
           >
             <Camera className="h-4 w-4" />
@@ -173,7 +173,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                 name="systolic"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs text-slate-300">
+                    <FormLabel className="text-xs text-muted-foreground">
                       Systolisch
                     </FormLabel>
                     <Select
@@ -181,7 +181,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                       value={field.value.toString()}
                     >
                       <FormControl>
-                        <SelectTrigger className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50">
+                        <SelectTrigger className="rounded-2xl bg-secondary/50 border-border text-foreground">
                           <SelectValue placeholder="SYS" />
                         </SelectTrigger>
                       </FormControl>
@@ -202,7 +202,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                 name="diastolic"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs text-slate-300">
+                    <FormLabel className="text-xs text-muted-foreground">
                       Diastolisch
                     </FormLabel>
                     <Select
@@ -210,7 +210,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                       value={field.value.toString()}
                     >
                       <FormControl>
-                        <SelectTrigger className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50">
+                        <SelectTrigger className="rounded-2xl bg-secondary/50 border-border text-foreground">
                           <SelectValue placeholder="DIA" />
                         </SelectTrigger>
                       </FormControl>
@@ -231,7 +231,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                 name="pulse"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs text-slate-300">
+                    <FormLabel className="text-xs text-muted-foreground">
                       Puls (optional)
                     </FormLabel>
                     <FormControl>
@@ -239,7 +239,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                         type="number"
                         inputMode="numeric"
                         placeholder="72"
-                        className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                        className="rounded-2xl bg-secondary/50 border-border text-foreground"
                         {...field}
                         onChange={(e) =>
                           field.onChange(
@@ -257,7 +257,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
             <button
               type="button"
               onClick={() => setShowAdvanced((v) => !v)}
-              className="text-xs text-slate-400 underline-offset-2 hover:underline"
+              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
             >
               {showAdvanced ? "Details ausblenden" : "Details einblenden (Datum, Notiz)"}
             </button>
@@ -269,13 +269,13 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                   name="date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Datum
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="date"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -288,13 +288,13 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                   name="time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Uhrzeit
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="time"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -307,14 +307,14 @@ export function BloodPressureForm({ userId }: { userId: string }) {
                   name="notes"
                   render={({ field }) => (
                     <FormItem className="md:col-span-1">
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Notiz
                       </FormLabel>
                       <FormControl>
                         <Input
                           maxLength={80}
                           placeholder="z.B. nach dem Sport"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -325,8 +325,8 @@ export function BloodPressureForm({ userId }: { userId: string }) {
               </div>
             )}
 
-            <div className="flex items-center justify-between rounded-2xl bg-slate-900/70 px-4 py-3">
-              <span className="text-sm font-semibold text-slate-100">
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-4 py-3">
+              <span className="text-sm font-semibold text-foreground">
                 {watchedSystolic}/{watchedDiastolic} mmHg
               </span>
               <span className={`text-xs font-medium ${currentCategory.color}`}>
@@ -336,7 +336,7 @@ export function BloodPressureForm({ userId }: { userId: string }) {
 
             <Button
               type="submit"
-              className="mt-1 w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
+              className="mt-1 w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold text-white shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
               disabled={isSubmitting || !userId}
             >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

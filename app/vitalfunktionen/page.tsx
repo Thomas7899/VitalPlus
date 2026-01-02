@@ -171,11 +171,11 @@ export default function VitalfunktionenPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold text-slate-50">Vitalfunktionen</h1>
+      <h1 className="text-3xl font-bold text-foreground">Vitalfunktionen</h1>
 
-      <Card className="border-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/90 shadow-xl shadow-purple-500/10">
+      <Card className="border border-border/50 bg-card/80 dark:bg-gradient-to-br dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-900/90 shadow-xl shadow-red-500/5 dark:shadow-purple-500/10 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-lg text-slate-50">
+          <CardTitle className="text-lg text-foreground">
             Neue Messung erfassen
           </CardTitle>
         </CardHeader>
@@ -189,13 +189,13 @@ export default function VitalfunktionenPage() {
                   name="heartRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">Herzfrequenz (bpm)</FormLabel>
+                      <FormLabel className="text-xs text-muted-foreground">Herzfrequenz (bpm)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           inputMode="numeric"
                           placeholder="z.B. 60"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -207,8 +207,8 @@ export default function VitalfunktionenPage() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            className={`rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400 ${
-                              heartRate === v ? "border-purple-500 text-purple-300" : ""
+                            className={`rounded-full border-border bg-secondary/50 text-xs text-foreground hover:border-red-400 ${
+                              heartRate === v ? "border-red-500 text-red-600 dark:text-red-300" : ""
                             }`}
                             onClick={() =>
                               form.setValue("heartRate", v, { shouldValidate: true })
@@ -227,13 +227,13 @@ export default function VitalfunktionenPage() {
                   name="respiratoryRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">Atemfrequenz (pro Min.)</FormLabel>
+                      <FormLabel className="text-xs text-muted-foreground">Atemfrequenz (pro Min.)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           inputMode="numeric"
                           placeholder="z.B. 16"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -245,8 +245,8 @@ export default function VitalfunktionenPage() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            className={`rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400 ${
-                              respiratoryRate === v ? "border-purple-500 text-purple-300" : ""
+                            className={`rounded-full border-border bg-secondary/50 text-xs text-foreground hover:border-cyan-400 ${
+                              respiratoryRate === v ? "border-cyan-500 text-cyan-600 dark:text-cyan-300" : ""
                             }`}
                             onClick={() =>
                               form.setValue("respiratoryRate", v, { shouldValidate: true })
@@ -265,13 +265,13 @@ export default function VitalfunktionenPage() {
                   name="oxygenSaturation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">Sauerstoffsättigung (%)</FormLabel>
+                      <FormLabel className="text-xs text-muted-foreground">Sauerstoffsättigung (%)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           inputMode="numeric"
                           placeholder="z.B. 98"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -283,8 +283,8 @@ export default function VitalfunktionenPage() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            className={`rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400 ${
-                              oxygenSaturation === v ? "border-purple-500 text-purple-300" : ""
+                            className={`rounded-full border-border bg-secondary/50 text-xs text-foreground hover:border-blue-400 ${
+                              oxygenSaturation === v ? "border-blue-500 text-blue-600 dark:text-blue-300" : ""
                             }`}
                             onClick={() =>
                               form.setValue("oxygenSaturation", v, { shouldValidate: true })
@@ -299,14 +299,14 @@ export default function VitalfunktionenPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl bg-slate-900/70 px-4 py-3 text-xs text-slate-300">
+              <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-4 py-3 text-xs text-muted-foreground">
                 <span>
                   Aktuelle Werte:{" "}
-                  {heartRate && <span className="mr-3">❤️ {heartRate} bpm</span>}
-                  {respiratoryRate && <span className="mr-3">🌬️ {respiratoryRate}/min</span>}
-                  {oxygenSaturation && <span>🩸 {oxygenSaturation} %</span>}
+                  {heartRate && <span className="mr-3 text-foreground">❤️ {heartRate} bpm</span>}
+                  {respiratoryRate && <span className="mr-3 text-foreground">🌬️ {respiratoryRate}/min</span>}
+                  {oxygenSaturation && <span className="text-foreground">🩸 {oxygenSaturation} %</span>}
                   {!heartRate && !respiratoryRate && !oxygenSaturation && (
-                    <span className="text-slate-500">Noch keine Eingabe.</span>
+                    <span>Noch keine Eingabe.</span>
                   )}
                 </span>
               </div>
@@ -314,7 +314,7 @@ export default function VitalfunktionenPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting || !userId}
-                className="w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
+                className="w-full rounded-2xl bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 text-sm font-semibold text-white shadow-[0_10px_40px_rgba(239,68,68,0.35)] hover:brightness-110"
               >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSubmitting ? "Speichern..." : "Messung speichern"}

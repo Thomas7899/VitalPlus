@@ -158,13 +158,13 @@ export default function KoerperzusammensetzungPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold text-slate-50">
+      <h1 className="text-3xl font-bold text-foreground">
         Körperzusammensetzung
       </h1>
 
-      <Card className="border-0 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/90 shadow-xl shadow-purple-500/10">
+      <Card className="border border-border/50 bg-card/80 dark:bg-gradient-to-br dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-900/90 shadow-xl shadow-blue-500/5 dark:shadow-purple-500/10 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-lg text-slate-50">
+          <CardTitle className="text-lg text-foreground">
             Neue Messung erfassen
           </CardTitle>
         </CardHeader>
@@ -180,7 +180,7 @@ export default function KoerperzusammensetzungPage() {
                   name="weight"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-slate-300">
+                      <FormLabel className="text-xs text-muted-foreground">
                         Gewicht (kg)
                       </FormLabel>
                       <FormControl>
@@ -189,7 +189,7 @@ export default function KoerperzusammensetzungPage() {
                           step="0.1"
                           inputMode="decimal"
                           placeholder="z.B. 75.5"
-                          className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                          className="rounded-2xl bg-secondary/50 border-border text-foreground"
                           {...field}
                         />
                       </FormControl>
@@ -199,7 +199,7 @@ export default function KoerperzusammensetzungPage() {
                 />
 
                 <div className="flex flex-wrap items-end gap-2">
-                  <span className="text-xs text-slate-400 mr-2">
+                  <span className="text-xs text-muted-foreground mr-2">
                     Schnelle Anpassung:
                   </span>
                   {[-1, -0.5, 0.5, 1].map((delta) => (
@@ -208,7 +208,7 @@ export default function KoerperzusammensetzungPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400"
+                      className="rounded-full border-border bg-secondary/50 text-xs text-foreground hover:border-blue-400"
                       onClick={() =>
                         form.setValue(
                           "weight",
@@ -226,7 +226,7 @@ export default function KoerperzusammensetzungPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="rounded-full border-slate-700 bg-slate-900/70 text-xs text-slate-200 hover:border-purple-400"
+                      className="rounded-full border-border bg-secondary/50 text-xs text-foreground hover:border-blue-400"
                       onClick={() =>
                         form.setValue("weight", lastEntry.weight)
                       }
@@ -240,7 +240,7 @@ export default function KoerperzusammensetzungPage() {
               <button
                 type="button"
                 onClick={() => setShowDetails((v) => !v)}
-                className="text-xs text-slate-400 underline-offset-2 hover:underline"
+                className="text-xs text-muted-foreground underline-offset-2 hover:underline"
               >
                 {showDetails
                   ? "Details ausblenden"
@@ -254,7 +254,7 @@ export default function KoerperzusammensetzungPage() {
                     name="bmi"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs text-slate-300">
+                        <FormLabel className="text-xs text-muted-foreground">
                           BMI
                         </FormLabel>
                         <FormControl>
@@ -263,7 +263,7 @@ export default function KoerperzusammensetzungPage() {
                             step="0.1"
                             inputMode="decimal"
                             placeholder="z.B. 22.1"
-                            className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                            className="rounded-2xl bg-secondary/50 border-border text-foreground"
                             {...field}
                           />
                         </FormControl>
@@ -276,7 +276,7 @@ export default function KoerperzusammensetzungPage() {
                     name="muscleMass"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs text-slate-300">
+                        <FormLabel className="text-xs text-muted-foreground">
                           Muskelmasse (%)
                         </FormLabel>
                         <FormControl>
@@ -285,7 +285,7 @@ export default function KoerperzusammensetzungPage() {
                             step="0.1"
                             inputMode="decimal"
                             placeholder="z.B. 45.2"
-                            className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                            className="rounded-2xl bg-secondary/50 border-border text-foreground"
                             {...field}
                           />
                         </FormControl>
@@ -298,7 +298,7 @@ export default function KoerperzusammensetzungPage() {
                     name="bodyFat"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs text-slate-300">
+                        <FormLabel className="text-xs text-muted-foreground">
                           Körperfettanteil (%)
                         </FormLabel>
                         <FormControl>
@@ -307,7 +307,7 @@ export default function KoerperzusammensetzungPage() {
                             step="0.1"
                             inputMode="decimal"
                             placeholder="z.B. 18.5"
-                            className="rounded-2xl bg-slate-900/70 border-slate-700 text-slate-50"
+                            className="rounded-2xl bg-secondary/50 border-border text-foreground"
                             {...field}
                           />
                         </FormControl>
@@ -318,14 +318,14 @@ export default function KoerperzusammensetzungPage() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between rounded-2xl bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
+              <div className="flex items-center justify-between rounded-2xl bg-secondary/50 px-4 py-3 text-sm text-foreground">
                 <span>
                   Aktuelles Gewicht:{" "}
                   <span className="font-semibold">
                     {currentWeight?.toString().replace(".", ",")} kg
                   </span>
                   {lastEntry && (
-                    <span className="ml-2 text-xs text-slate-400">
+                    <span className="ml-2 text-xs text-muted-foreground">
                       (letzte Messung: {lastEntry.weight} kg)
                     </span>
                   )}
@@ -335,7 +335,7 @@ export default function KoerperzusammensetzungPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting || !userId}
-                className="w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-sm font-semibold shadow-[0_10px_40px_rgba(59,130,246,0.45)] hover:brightness-110"
+                className="w-full rounded-2xl bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 text-sm font-semibold text-white shadow-[0_10px_40px_rgba(59,130,246,0.35)] hover:brightness-110"
               >
                 {isSubmitting && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
