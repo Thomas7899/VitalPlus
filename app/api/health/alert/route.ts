@@ -9,6 +9,10 @@ import { generateAlertAnalysisPrompt, HEALTH_COACH_SYSTEM_PROMPT } from "@/lib/p
 import { getCachedResponse, setCachedResponse } from "@/lib/cache";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { saveAlerts, getUserAlertThresholds, AlertType, AlertSeverity } from "@/lib/alert-history";
+import { auth } from "@/lib/auth";
+import { validateHealthGoal } from "@/lib/ai-validation";
+import { checkDataAvailability } from "@/lib/data-availability";
+import { getYearTransitionInfo } from "@/lib/date-utils";
 
 export const maxDuration = 60;
 
@@ -24,14 +28,29 @@ interface AlertInfo {
 
 export async function POST(req: Request) {
   try {
-    const { userId, goal = "Gewicht halten", skipCache = false } = await req.json();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    // 🔐 Auth prüfen
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
     }
 
+    const body = await req.json();
+    const { userId, goal: rawGoal = "Gewicht halten", skipCache = false } = body;
+
+    // 🔐 Ownership Check
+    const targetUserId = userId || session.user.id;
+    if (userId && userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Zugriff verweigert" },
+        { status: 403 }
+      );
+    }
+
+    // 🛡️ Sanitize goal
+    const goal = validateHealthGoal(rawGoal);
+
     // Rate-Limiting prüfen
-    const rateLimit = checkRateLimit(userId, "ai:alert");
+    const rateLimit = checkRateLimit(targetUserId, "ai:alert");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { 
@@ -45,7 +64,7 @@ export async function POST(req: Request) {
     // Cache prüfen (außer wenn explizit übersprungen)
     if (!skipCache) {
       const cached = await getCachedResponse<{ alerts: string[]; recommendation: string | null }>(
-        userId,
+        targetUserId,
         "alerts"
       );
       if (cached) {
@@ -61,16 +80,29 @@ export async function POST(req: Request) {
     const recent = await db
       .select()
       .from(healthData)
-      .where(eq(healthData.userId, userId))
+      .where(eq(healthData.userId, targetUserId))
       .orderBy(desc(healthData.date))
       .limit(7);
 
-    if (recent.length === 0) {
-      return NextResponse.json({ error: "No recent data" }, { status: 404 });
+    // 📅 2026-READINESS: Datenverfügbarkeit prüfen
+    const dataAvailability = await checkDataAvailability(targetUserId);
+    const yearInfo = getYearTransitionInfo();
+
+    // LOW-DATA HANDLING: Graceful Response bei wenig/keinen Daten
+    if (recent.length === 0 || dataAvailability.status === "none") {
+      return NextResponse.json({ 
+        success: true,
+        alerts: [],
+        recommendation: yearInfo.isEarlyYear 
+          ? "🎉 Willkommen im neuen Jahr! Starte jetzt mit der Erfassung deiner Gesundheitsdaten."
+          : "📊 Erfasse deine ersten Gesundheitsdaten, um personalisierte Alerts zu erhalten.",
+        lowDataMode: true,
+        dataStatus: dataAvailability.status,
+      });
     }
 
     // Personalisierte Grenzwerte laden
-    const thresholds = await getUserAlertThresholds(userId);
+    const thresholds = await getUserAlertThresholds(targetUserId);
 
     const avgCalories = average(recent.map((d) => d.calories || 0));
     const avgSteps = average(recent.map((d) => d.steps || 0));
@@ -168,14 +200,14 @@ export async function POST(req: Request) {
         recommendation: null,
         message: "Keine Auffälligkeiten erkannt.",
       };
-      await setCachedResponse(userId, "alerts", { alerts: [], recommendation: null });
+      await setCachedResponse(targetUserId, "alerts", { alerts: [], recommendation: null });
       return NextResponse.json(result, { status: 200 });
     }
 
     // Alerts in History speichern
     await saveAlerts(
       alertInfos.map((a) => ({
-        userId,
+        userId: targetUserId,
         alertType: a.type,
         severity: a.severity,
         message: a.message,
@@ -184,7 +216,7 @@ export async function POST(req: Request) {
       }))
     );
 
-    await updateHealthEmbeddingForUser(userId).catch(err => 
+    await updateHealthEmbeddingForUser(targetUserId).catch(err => 
       console.warn("Background Embedding Update failed:", err)
     );
 
@@ -203,7 +235,7 @@ export async function POST(req: Request) {
     const recommendation = completion.choices[0].message?.content ?? "Keine Empfehlung generiert.";
 
     // Ergebnis cachen
-    await setCachedResponse(userId, "alerts", { alerts, recommendation });
+    await setCachedResponse(targetUserId, "alerts", { alerts, recommendation });
 
     return NextResponse.json(
       {

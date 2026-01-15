@@ -5,9 +5,19 @@ import { healthData, healthEmbeddings, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
 import { NextResponse } from "next/server";
-import { generateDailyPlanPrompt, HEALTH_COACH_SYSTEM_PROMPT } from "@/lib/prompts";
+import { 
+  generateDailyPlanPrompt, 
+  HEALTH_COACH_SYSTEM_PROMPT,
+  generateDataAvailabilityContext,
+  generateYearTransitionContext,
+  generateLowDataFallbackPrompt
+} from "@/lib/prompts";
 import { getCachedResponse, setCachedResponse } from "@/lib/cache";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { auth } from "@/lib/auth";
+import { validateDailyPlanResponse, validateHealthGoal } from "@/lib/ai-validation";
+import { checkDataAvailability, getHealthBaseline } from "@/lib/data-availability";
+import { getYearTransitionInfo } from "@/lib/date-utils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,14 +26,26 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: Request) {
   try {
-    const { userId, goal: providedGoal, skipCache = false } = await req.json();
+    // 🔐 Auth prüfen
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
+    }
 
-    if (!userId) {
-      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    const body = await req.json();
+    const { userId, goal: providedGoal, skipCache = false } = body;
+
+    // 🔐 Ownership Check
+    const targetUserId = userId || session.user.id;
+    if (userId && userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Zugriff verweigert: Sie können nur eigene Daten analysieren" },
+        { status: 403 }
+      );
     }
 
     // Rate-Limiting prüfen
-    const rateLimit = checkRateLimit(userId, "ai:plan");
+    const rateLimit = checkRateLimit(targetUserId, "ai:plan");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { 
@@ -36,7 +58,7 @@ export async function POST(req: Request) {
 
     // Cache prüfen
     if (!skipCache) {
-      const cached = await getCachedResponse<{ plan: string }>(userId, "daily_plan");
+      const cached = await getCachedResponse<{ plan: string }>(targetUserId, "daily_plan");
       if (cached) {
         return NextResponse.json({ plan: cached.plan, fromCache: true });
       }
@@ -50,59 +72,100 @@ export async function POST(req: Request) {
         targetWeight: users.targetWeight,
       })
       .from(users)
-      .where(eq(users.id, userId))
+      .where(eq(users.id, targetUserId))
       .limit(1)
       .then((rows) => rows[0]);
 
-    // Ziel aus Profil verwenden, falls nicht explizit angegeben
-    const goal = providedGoal || mapHealthGoalToText(userProfile?.healthGoal, userProfile?.activityLevel);
+    // 🛡️ Goal sanitizen
+    const rawGoal = providedGoal || mapHealthGoalToText(userProfile?.healthGoal, userProfile?.activityLevel);
+    const goal = validateHealthGoal(rawGoal);
 
-    updateHealthEmbeddingForUser(userId).catch((err) =>
-      console.warn("⚠️ Embedding update failed:", err)
-    );
+    // 📅 2026-READINESS: Datenverfügbarkeit prüfen
+    const dataAvailability = await checkDataAvailability(targetUserId);
+    const yearInfo = getYearTransitionInfo();
+
+    // Embedding nur aktualisieren wenn genug Daten
+    if (dataAvailability.status !== "none" && dataAvailability.status !== "insufficient") {
+      updateHealthEmbeddingForUser(targetUserId).catch((err) =>
+        console.warn("⚠️ Embedding update failed:", err)
+      );
+    }
 
     const [embeddingEntry, recentData] = await Promise.all([
       db
         .select()
         .from(healthEmbeddings)
-        .where(eq(healthEmbeddings.userId, userId))
+        .where(eq(healthEmbeddings.userId, targetUserId))
         .limit(1)
         .then((rows) => rows[0]),
       db
         .select()
         .from(healthData)
-        .where(eq(healthData.userId, userId))
+        .where(eq(healthData.userId, targetUserId))
         .orderBy(desc(healthData.date))
         .limit(7),
     ]);
 
-    if (recentData.length === 0) {
-      return NextResponse.json({ error: "No health data found" }, { status: 404 });
-    }
+    // 📊 LOW-DATA HANDLING: Nutze Baseline bei fehlenden Daten
+    let avgCalories: number;
+    let avgSteps: number;
+    let avgWeight: number;
+    let lowDataMode = false;
 
-    const avgCalories = average(recentData.map((d) => d.calories ?? 0));
-    const avgSteps = average(recentData.map((d) => d.steps ?? 0));
-    const avgWeight = average(recentData.map((d) => d.weight ?? 0));
+    if (recentData.length === 0 || dataAvailability.status === "none") {
+      // Keine Daten → Nutze Baseline (evtl. aus Vorjahr oder Defaults)
+      const baseline = await getHealthBaseline(targetUserId);
+      avgCalories = 2000; // Standard für Plan-Erstellung
+      avgSteps = baseline.steps || 8000;
+      avgWeight = baseline.weight || 70;
+      lowDataMode = true;
+    } else {
+      avgCalories = average(recentData.map((d) => d.calories ?? 0)) || 2000;
+      avgSteps = average(recentData.map((d) => d.steps ?? 0)) || 8000;
+      avgWeight = average(recentData.map((d) => d.weight ?? 0)) || 70;
+      lowDataMode = dataAvailability.status === "insufficient";
+    }
 
     const context = embeddingEntry?.content || "Keine erweiterten Gesundheitsdaten verfügbar.";
 
-    // Prompt-Generierung ausgelagert
-    const prompt = generateDailyPlanPrompt({
-      calories: avgCalories,
-      steps: avgSteps,
-      weight: avgWeight,
-      goal,
-      context
-    });
+    // 📅 2026-READINESS: Kontextualisierter Prompt
+    const dataContext = generateDataAvailabilityContext(
+      dataAvailability.status,
+      dataAvailability.daysWithData,
+      yearInfo.isEarlyYear
+    );
+    const yearContext = generateYearTransitionContext(
+      yearInfo.currentYear,
+      yearInfo.previousYear,
+      yearInfo.daysIntoNewYear
+    );
+
+    // Prompt-Generierung 
+    const prompt = lowDataMode 
+      ? generateLowDataFallbackPrompt(goal, yearInfo.isEarlyYear) + `\n\n## Baseline-Daten:\n- Kalorien: ${avgCalories} kcal\n- Schritte: ${avgSteps}\n- Gewicht: ${avgWeight} kg`
+      : generateDailyPlanPrompt({
+          calories: avgCalories,
+          steps: avgSteps,
+          weight: avgWeight,
+          goal,
+          context
+        });
+
+    const enhancedSystemPrompt = [
+      HEALTH_COACH_SYSTEM_PROMPT,
+      dataContext,
+      yearContext,
+    ].filter(Boolean).join("\n\n");
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: HEALTH_COACH_SYSTEM_PROMPT },
+        { role: "system", content: enhancedSystemPrompt },
         { role: "user", content: prompt },
       ],
       temperature: 0.8,
+      max_tokens: 1000,
     });
 
     const result = completion.choices[0].message?.content?.trim();
@@ -111,15 +174,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Keine Antwort von KI" }, { status: 502 });
     }
 
-    let plan;
-    try {
-      plan = JSON.parse(result);
-    } catch {
-      plan = { summary: result };
-    }
+    // 🛡️ Validiere AI Output
+    const validationResult = validateDailyPlanResponse(result);
+    const plan = validationResult.data!;
 
     const nutritionList = Array.isArray(plan.nutrition)
-      ? plan.nutrition.map((m: any) => `- **${m.meal}:** ${m.content}`).join("\n")
+      ? plan.nutrition.map((m) => `- **${m.meal}:** ${m.content}`).join("\n")
       : "- Keine spezifischen Empfehlungen verfügbar";
 
     const markdownPlan = `
@@ -131,12 +191,17 @@ ${nutritionList}
 **💪 Training:** ${plan.training || "Moderate Bewegung empfohlen"}
 
 **💬 Motivation:** ${plan.motivation || "Du schaffst das!"}
+${lowDataMode ? "\n---\n*📊 Hinweis: Dieser Plan basiert auf allgemeinen Empfehlungen. Erfasse mehr Daten für personalisierte Vorschläge.*" : ""}
 `;
 
     // Ergebnis cachen
-    await setCachedResponse(userId, "daily_plan", { plan: markdownPlan });
+    await setCachedResponse(targetUserId, "daily_plan", { plan: markdownPlan });
 
-    return NextResponse.json({ plan: markdownPlan }, { status: 200 });
+    return NextResponse.json({ 
+      plan: markdownPlan,
+      lowDataMode,
+      dataStatus: dataAvailability.status,
+    }, { status: 200 });
   } catch (error) {
     console.error("💥 Fehler bei der Planerstellung:", error);
     return NextResponse.json(

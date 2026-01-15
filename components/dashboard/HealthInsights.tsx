@@ -26,6 +26,8 @@ export function HealthInsights({ userId }: { userId: string }) {
   const [sections, setSections] = useState<Section[]>([]);
   const [expanded, setExpanded] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [lowDataMode, setLowDataMode] = useState(false);
+  const [dataStatus, setDataStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -43,6 +45,13 @@ export function HealthInsights({ userId }: { userId: string }) {
         });
 
         const data = await res.json();
+        
+        // 📅 2026-READINESS: Low-Data-Modus erkennen
+        if (data.lowDataMode) {
+          setLowDataMode(true);
+          setDataStatus(data.dataStatus);
+        }
+        
         if (!res.ok || !data.sections) {
           throw new Error(data.error || "Antwort der API war ungültig");
         }
@@ -143,6 +152,27 @@ export function HealthInsights({ userId }: { userId: string }) {
         </div>
       ) : (
         <>
+          {/* 📅 2026-READINESS: Low-Data-Hinweis */}
+          {lowDataMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-500/20"
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                    Eingeschränkte Datenbasis
+                  </p>
+                  <p className="text-xs text-amber-600/80 dark:text-amber-400/70 mt-1">
+                    Diese Analyse basiert auf wenigen Daten. Erfasse mehr Gesundheitsdaten für genauere, personalisierte Empfehlungen.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {summary && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}

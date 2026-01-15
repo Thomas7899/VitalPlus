@@ -1,4 +1,9 @@
 // lib/data.ts
+/**
+ * Dashboard Data Layer
+ * Zentrale Datenabruf-Funktionen mit Server-Side Caching
+ */
+
 import { Gauge, Moon, Weight, Thermometer } from "lucide-react";
 import { db } from "@/db/client";
 import { healthData } from "@/db/schema";
@@ -6,6 +11,10 @@ import { eq, gte, asc, desc, and, sql } from "drizzle-orm";
 import { getHealthInsights } from "./health-insights";
 import type { DashboardTrendData } from "@/types/health";
 import { unstable_cache } from "next/cache";
+
+// ============================================
+// 🔧 UTILITIES
+// ============================================
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -16,17 +25,6 @@ function timeAgo(date: Date): string {
   const days = Math.floor(seconds / 86400);
   return `vor ${Math.round(days / 7)} Wochen`;
 }
-
-export type DashboardStatsData = {
-  steps: string;
-  calories: string;
-  heartRate: string;
-  sleep: string;
-  stepsChange: string;
-  caloriesChange: string;
-  heartRateChange: string;
-  sleepChange: string;
-};
 
 function calculateChange(
   current: number | null | undefined,
@@ -39,18 +37,25 @@ function calculateChange(
   return `${change > 0 ? "+" : ""}${Math.round(change)}%`;
 }
 
-function avg(arr: (number | null | undefined)[]) {
-  const vals = arr.filter((n): n is number => typeof n === "number");
+function avg(arr: (number | null | undefined)[]): number {
+  const vals = arr.filter((n): n is number => typeof n === "number" && n > 0);
   return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
 }
-function sum(arr: (number | null | undefined)[]) {
-  const vals = arr.filter((n): n is number => typeof n === "number");
-  return vals.reduce((a, b) => a + b, 0);
-}
-function maxNumber(arr: (number | null | undefined)[]) {
-  const vals = arr.filter((n): n is number => typeof n === "number");
-  return vals.length ? Math.max(...vals) : null;
-}
+
+// ============================================
+// 📊 DASHBOARD STATS
+// ============================================
+
+export type DashboardStatsData = {
+  steps: string;
+  calories: string;
+  heartRate: string;
+  sleep: string;
+  stepsChange: string;
+  caloriesChange: string;
+  heartRateChange: string;
+  sleepChange: string;
+};
 
 // 📊 Interne Funktion für Dashboard Stats
 async function _getDashboardStats(userId: string): Promise<DashboardStatsData> {

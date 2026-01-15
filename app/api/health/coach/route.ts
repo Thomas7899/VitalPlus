@@ -5,9 +5,23 @@ import { db } from "@/db/client";
 import { healthData, healthEmbeddings, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { updateHealthEmbeddingForUser } from "@/lib/health-insights";
-import { generateCoachAnalysisPrompt, HEALTH_COACH_SYSTEM_PROMPT } from "@/lib/prompts";
+import { 
+  generateCoachAnalysisPrompt, 
+  HEALTH_COACH_SYSTEM_PROMPT,
+  generateDataAvailabilityContext,
+  generateYearTransitionContext,
+  generateLowDataFallbackPrompt
+} from "@/lib/prompts";
 import { getCachedResponse, setCachedResponse } from "@/lib/cache";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { 
+  validateCoachResponse, 
+  addMedicalDisclaimer,
+  validateHealthGoal 
+} from "@/lib/ai-validation";
+import { auth } from "@/lib/auth";
+import { checkDataAvailability } from "@/lib/data-availability";
+import { getYearTransitionInfo } from "@/lib/date-utils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,14 +30,26 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: Request) {
   try {
-    const { userId, goal: providedGoal, skipCache = false } = await req.json();
+    // 🔐 Auth prüfen
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Nicht authentifiziert" }, { status: 401 });
+    }
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
+    const body = await req.json();
+    const { userId, goal: providedGoal, skipCache = false } = body;
+
+    // 🔐 Ownership Check - User kann nur eigene Daten analysieren
+    const targetUserId = userId || session.user.id;
+    if (userId && userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Zugriff verweigert: Sie können nur eigene Daten analysieren" },
+        { status: 403 }
+      );
     }
 
     // Rate-Limiting prüfen
-    const rateLimit = checkRateLimit(userId, "ai:coach");
+    const rateLimit = checkRateLimit(targetUserId, "ai:coach");
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { 
@@ -36,7 +62,7 @@ export async function POST(req: Request) {
 
     // Cache prüfen
     if (!skipCache) {
-      const cached = await getCachedResponse<{ sections: any[] }>(userId, "coach_analysis");
+      const cached = await getCachedResponse<{ sections: unknown[] }>(targetUserId, "coach_analysis");
       if (cached) {
         return NextResponse.json({ ...cached, fromCache: true });
       }
@@ -50,36 +76,84 @@ export async function POST(req: Request) {
         activityLevel: users.activityLevel,
       })
       .from(users)
-      .where(eq(users.id, userId))
+      .where(eq(users.id, targetUserId))
       .limit(1)
       .then((rows) => rows[0]);
 
-    const goal = providedGoal || mapHealthGoalToText(userProfile?.healthGoal, userProfile?.activityLevel);
+    // 🛡️ Goal sanitizen (Prompt Injection Prevention)
+    const rawGoal = providedGoal || mapHealthGoalToText(userProfile?.healthGoal, userProfile?.activityLevel);
+    const goal = validateHealthGoal(rawGoal);
 
-    // ⏳ Embedding-Update parallelisieren
-    const embeddingPromise = updateHealthEmbeddingForUser(userId);
+    // 📅 2026-READINESS: Datenverfügbarkeit prüfen
+    const dataAvailability = await checkDataAvailability(targetUserId);
+    const yearInfo = getYearTransitionInfo();
+
+    // ⏳ Embedding-Update im Hintergrund (nur wenn genug Daten)
+    if (dataAvailability.status !== "none" && dataAvailability.status !== "insufficient") {
+      updateHealthEmbeddingForUser(targetUserId).catch((err) =>
+        console.warn("⚠️ Embedding update failed:", err)
+      );
+    }
 
     // 🔹 Letzte Gesundheitsdaten und vorhandenes Embedding abrufen
     const [recent, embeddingResult] = await Promise.all([
       db
         .select()
         .from(healthData)
-        .where(eq(healthData.userId, userId))
+        .where(eq(healthData.userId, targetUserId))
         .orderBy(desc(healthData.date))
         .limit(30),
       db
         .select()
         .from(healthEmbeddings)
-        .where(eq(healthEmbeddings.userId, userId))
+        .where(eq(healthEmbeddings.userId, targetUserId))
         .limit(1),
-      embeddingPromise,
     ]);
 
-    if (recent.length === 0) {
-      return NextResponse.json(
-        { error: "Keine Gesundheitsdaten gefunden" },
-        { status: 404 }
+    // 📊 LOW-DATA HANDLING: Graceful Fallback bei wenig/keinen Daten
+    if (dataAvailability.status === "none") {
+      // Keine Daten → Allgemeine Empfehlungen
+      const lowDataPrompt = generateLowDataFallbackPrompt(goal, yearInfo.isEarlyYear);
+      const yearContext = generateYearTransitionContext(
+        yearInfo.currentYear, 
+        yearInfo.previousYear, 
+        yearInfo.daysIntoNewYear
       );
+      
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        max_tokens: 1000,
+        messages: [
+          { role: "system", content: HEALTH_COACH_SYSTEM_PROMPT + yearContext },
+          { role: "user", content: lowDataPrompt },
+        ],
+      });
+
+      const content = completion.choices[0]?.message?.content?.trim();
+      if (content) {
+        const validationResult = validateCoachResponse(content);
+        if (validationResult.data) {
+          return NextResponse.json({
+            ...validationResult.data,
+            lowDataMode: true,
+            dataStatus: dataAvailability.status,
+            userMessage: dataAvailability.userMessage,
+          });
+        }
+      }
+      
+      // Fallback bei Fehler
+      return NextResponse.json({
+        sections: [{
+          title: "Willkommen bei VitalPlus",
+          content: dataAvailability.userMessage,
+          type: "info"
+        }],
+        lowDataMode: true,
+        dataStatus: "none",
+      });
     }
 
     const embeddingEntry = embeddingResult[0];
@@ -94,17 +168,38 @@ export async function POST(req: Request) {
         )
         .join("\n");
 
+    // 📅 2026-READINESS: Kontextualisierter Prompt mit Datenverfügbarkeit
+    const dataContext = generateDataAvailabilityContext(
+      dataAvailability.status,
+      dataAvailability.daysWithData,
+      yearInfo.isEarlyYear
+    );
+    const yearContext = generateYearTransitionContext(
+      yearInfo.currentYear,
+      yearInfo.previousYear,
+      yearInfo.daysIntoNewYear
+    );
+
     // 🧠 OpenAI-Analyse mit zentralisiertem Prompt
     const userPrompt = generateCoachAnalysisPrompt(summary, goal);
+    
+    // System-Prompt mit Kontext erweitern
+    const enhancedSystemPrompt = [
+      HEALTH_COACH_SYSTEM_PROMPT,
+      dataContext,
+      yearContext,
+      dataAvailability.aiContext,
+    ].filter(Boolean).join("\n\n");
     
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       temperature: 0.7,
+      max_tokens: 1500,
       messages: [
         {
           role: "system",
-          content: HEALTH_COACH_SYSTEM_PROMPT,
+          content: enhancedSystemPrompt,
         },
         {
           role: "user",
@@ -119,17 +214,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Keine Antwort von der KI" }, { status: 502 });
     }
 
-    let parsedJson;
-    try {
-      parsedJson = JSON.parse(content);
-    } catch {
-      parsedJson = { sections: [{ title: "Fehler", content, type: "info" }] };
+    // 🛡️ Validiere AI Output mit Zod
+    const validationResult = validateCoachResponse(content);
+    
+    if (!validationResult.success && !validationResult.data) {
+      console.error("AI response validation failed completely");
+      return NextResponse.json({ error: "AI-Antwort ungültig" }, { status: 502 });
     }
 
-    // Ergebnis cachen
-    await setCachedResponse(userId, "coach_analysis", parsedJson);
+    // 🏥 Füge medizinischen Disclaimer hinzu wenn nötig
+    const finalResponse = addMedicalDisclaimer(validationResult.data!);
 
-    return NextResponse.json(parsedJson, { status: 200 });
+    // Ergebnis cachen
+    await setCachedResponse(targetUserId, "coach_analysis", finalResponse);
+
+    // 📊 Response mit Datenstatus anreichern
+    return NextResponse.json({
+      ...finalResponse,
+      dataStatus: dataAvailability.status,
+      lowDataMode: dataAvailability.status === "insufficient" || dataAvailability.status === "limited",
+    }, { status: 200 });
   } catch (error) {
     console.error("💥 Coach-Fehler:", error);
     return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
