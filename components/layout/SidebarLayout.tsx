@@ -146,7 +146,8 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
           {/* Footer */}
           <div className="p-4 border-t border-border">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">© 2025 Vital+</p>
+              {/* 📅 2026-READINESS: Dynamisches Jahr */}
+              <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Vital+</p>
               <ThemeToggle />
             </div>
           </div>

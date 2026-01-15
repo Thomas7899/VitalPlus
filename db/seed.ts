@@ -39,12 +39,16 @@ async function main() {
     },
   });
 
-  const year = 2025;
-  const startDate = new Date(year, 0, 1);
-  const endDate = new Date(year, 11, 31);
+  // 📅 2026-READINESS: Dynamisches Jahr - KEINE hardcodierten Jahreszahlen!
+  const currentYear = new Date().getFullYear();
+  // Generiere Daten für das aktuelle Jahr bis heute
+  const startDate = new Date(currentYear, 0, 1);
+  const endDate = new Date(); // Bis heute
+  endDate.setHours(23, 59, 59, 999);
+  
   const healthDataArray: any[] = [];
 
-  console.log(`Generiere Gesundheitsdaten für das Jahr ${year}...`);
+  console.log(`📅 Generiere Gesundheitsdaten für das Jahr ${currentYear} (bis heute)...`);
   for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
     const [systolic, diastolic] = getRandomBloodPressure();
 

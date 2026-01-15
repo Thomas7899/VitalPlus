@@ -1,5 +1,5 @@
 // components/dashboard/DashboardStats.tsx
-import { TrendingUp, Heart, Footprints, Flame } from "lucide-react";
+import { TrendingUp, Heart, Footprints, Flame, AlertCircle } from "lucide-react";
 import type { DashboardStatsData } from "@/lib/data";
 
 const statsConfig = [
@@ -32,6 +32,16 @@ const colorClasses = {
   },
 };
 
+// 📅 2026-READINESS: Prüft, ob Daten vorhanden sind
+function hasNoData(stats: DashboardStatsData): boolean {
+  return (
+    stats.steps === "0" &&
+    stats.calories === "0" &&
+    (!stats.heartRate || stats.heartRate === "N/A") &&
+    (!stats.sleep || stats.sleep === "N/A")
+  );
+}
+
 export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
   const displayStats = [
     { ...statsConfig[0], value: stats.steps, change: stats.stepsChange },
@@ -40,22 +50,51 @@ export function DashboardStats({ stats }: { stats: DashboardStatsData }) {
     { ...statsConfig[3], value: stats.sleep, change: stats.sleepChange },
   ];
 
+  // 📊 LOW-DATA FALLBACK: Zeige hilfreiche Nachricht bei leeren Daten
+  if (hasNoData(stats)) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 p-6 text-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <AlertCircle className="h-6 w-6 text-slate-400" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-slate-700 dark:text-slate-300">
+              Noch keine Daten für heute
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Erfasse deine ersten Gesundheitsdaten, um dein Dashboard zu füllen.
+            </p>
+          </div>
+          <a 
+            href="/erfassen" 
+            className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-shadow"
+          >
+            Daten erfassen
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {displayStats.map((stat) => {
         const colors = colorClasses[stat.color as keyof typeof colorClasses];
         const isPositive = stat.change.includes("+");
         const isNegative = stat.change.includes("-");
+        const isNoData = stat.value === "N/A" || stat.value === "0";
         
         return (
           <div
             key={stat.id}
-            className="group relative flex flex-col gap-3 p-4 rounded-2xl 
+            className={`group relative flex flex-col gap-3 p-4 rounded-2xl 
                        bg-white/70 dark:bg-slate-800/70 
                        border border-slate-200/60 dark:border-slate-700/40
                        hover:bg-white dark:hover:bg-slate-800
                        hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50
-                       transition-all duration-300"
+                       transition-all duration-300
+                       ${isNoData ? "opacity-60" : ""}`}
           >
             {/* Header mit Icon */}
             <div className="flex items-center justify-between">

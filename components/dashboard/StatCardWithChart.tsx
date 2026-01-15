@@ -26,11 +26,11 @@ export function StatCardWithChart({ data, metric }: StatCardWithChartProps) {
       return { chartData, latestValue: relevantData[0]?.[metric.key] ?? 0, delta: 0 };
     }
 
-    const latestValue = relevantData[relevantData.length - 1][metric.key];
-    const previousValue = relevantData[relevantData.length - 2][metric.key];
-    const delta = latestValue - previousValue;
+    const latestValue = relevantData[relevantData.length - 1]?.[metric.key];
+    const previousValue = relevantData[relevantData.length - 2]?.[metric.key];
+    const delta = (latestValue ?? 0) - (previousValue ?? 0);
 
-    return { chartData, latestValue, delta };
+    return { chartData, latestValue: latestValue ?? 0, delta };
   }, [data, metric.key]);
 
   const deltaColor = delta > 0 ? "text-red-500" : delta < 0 ? "text-green-600" : "text-slate-500";
